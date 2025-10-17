@@ -1,0 +1,15 @@
+LICENSE
+README.md
+pyproject.toml
+src/generator/__init__.py
+src/generator/core.py
+src/generator/parser.py
+src/generator/renderer.py
+src/generator/utils.py
+src/static_site_gen.egg-info/PKG-INFO
+src/static_site_gen.egg-info/SOURCES.txt
+src/static_site_gen.egg-info/dependency_links.txt
+src/static_site_gen.egg-info/entry_points.txt
+src/static_site_gen.egg-info/requires.txt
+src/static_site_gen.egg-info/top_level.txt
+tests/test_parser.py
