@@ -1,0 +1,30 @@
+# Static Site Generator Configuration
+# 
+# This file contains site-wide settings for the static site generator.
+# Required fields must be provided; optional fields have sensible defaults.
+
+# Required Settings
+site_name: "My Blog"
+base_url: "https://example.com"
+author: "Author Name"
+
+# Optional Settings (with defaults)
+timezone: "UTC"                    # Timezone for date handling (use IANA timezone names)
+posts_per_page: 10                # For future pagination feature
+output_dir: "site"                # Output directory name (relative to project root)
+
+# Site Metadata (optional)
+description: "A personal blog built with a Python static site generator"
+keywords: ["blog", "personal", "python", "static-site"]
+
+# Build Settings (optional)
+markdown_extensions:              # Additional Markdown extensions to enable
+  - "codehilite"                 # Syntax highlighting for code blocks
+  - "tables"                     # Table support
+  - "toc"                        # Table of contents generation
+
+# Future Configuration Options (not yet implemented)
+# pagination: true               # Enable pagination for post lists
+# rss_feed: true                # Generate RSS feed
+# sitemap: true                 # Generate sitemap.xml
+# comments: false               # Comment system integration

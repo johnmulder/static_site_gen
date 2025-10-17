@@ -1,0 +1,7 @@
+# Core dependencies for static site generator
+markdown>=3.4.0
+jinja2>=3.1.0
+pyyaml>=6.0.0
+
+# Development dependencies (install with: pip install -r requirements.txt -r requirements-dev.txt)
+# Or use: pip install -e ".[dev]" if using pyproject.toml

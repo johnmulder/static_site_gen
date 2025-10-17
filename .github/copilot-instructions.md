@@ -9,9 +9,9 @@ This is a minimal Python-based static site generator that converts Markdown file
 ### Content Processing Pipeline
 
 1. **Parse** YAML front matter + Markdown body from `content/posts/*.md` and `content/pages/*.md`
-2. **Transform** Markdown to HTML using the `markdown` library
-3. **Render** with Jinja2 templates based on content type
-4. **Output** to clean URL structure: `/posts/<slug>/index.html`
+1. **Transform** Markdown to HTML using the `markdown` library
+1. **Render** with Jinja2 templates based on content type
+1. **Output** to clean URL structure: `/posts/<slug>/index.html`
 
 ### Key Components to Implement
 
@@ -130,43 +130,51 @@ Use Jinja2 template inheritance with `base.html` providing shared layout:
 ## MVP Implementation Priorities
 
 ### Phase 1: Core Functionality
+
 1. **Content Parser** - Parse YAML front matter and Markdown body
-2. **Template Renderer** - Basic Jinja2 rendering with template inheritance
-3. **File Generator** - Create clean URL structure with index.html files
-4. **Static Asset Copy** - Simple file copying from static/ to site/static/
-5. **CLI Interface** - Single `build` command
+1. **Template Renderer** - Basic Jinja2 rendering with template inheritance
+1. **File Generator** - Create clean URL structure with index.html files
+1. **Static Asset Copy** - Simple file copying from static/ to site/static/
+1. **CLI Interface** - Single `build` command
 
 ### Phase 2: Essential Features
+
 1. **Index Page Generation** - Homepage with chronological post listing
-2. **Tag Pages** - Basic tag archive pages
-3. **Configuration Loading** - YAML config with validation
-4. **Error Handling** - Clear error messages for common issues
+1. **Tag Pages** - Basic tag archive pages
+1. **Configuration Loading** - YAML config with validation
+1. **Error Handling** - Clear error messages for common issues
 
 ## Testing Strategy
 
 ### Test Coverage Priorities
+
 1. **Content Processing Pipeline** - Test each step with sample content
+
    - Front matter parsing with various field combinations
    - Markdown to HTML conversion with common formatting
    - Slug generation from titles (handle special characters, spaces)
    - Date parsing and validation
 
-2. **File Operations** - Mock filesystem for unit tests
+1. **File Operations** - Mock filesystem for unit tests
+
    - Directory creation and cleanup
    - File copying and content writing
    - Path handling across platforms
 
-3. **Template Rendering** - Test with real template examples
+1. **Template Rendering** - Test with real template examples
+
    - Template inheritance chain (base -> post/index)
    - Context data passing (post metadata, config settings)
    - Missing template handling
 
-4. **Integration Tests** - End-to-end with temporary directories
+1. **Integration Tests** - End-to-end with temporary directories
+
    - Full build process with sample content
    - Output file structure validation
    - Generated HTML content verification
 
 ### Testing Conventions
+
 - Use `pytest` with descriptive test names: `test_slug_generation_handles_unicode_chars()`
 - Fixture for sample content: `sample_post_with_tags`, `sample_config`
 - Test data in `tests/fixtures/` directory
@@ -175,16 +183,19 @@ Use Jinja2 template inheritance with `base.html` providing shared layout:
 ## Error Handling Approach
 
 ### Fail Fast Scenarios (exit immediately)
+
 - Missing or invalid config.yaml
 - Template directory not found
 - Invalid YAML front matter syntax
 
 ### Graceful Handling (log warning, continue)
+
 - Missing optional front matter fields (tags, description)
 - Invalid dates (skip post or use filename date)
 - Missing static files referenced in content
 
 ### Error Message Guidelines
+
 - Include file path and line number when possible
 - Suggest specific fixes: "Add 'title' field to front matter"
 - Use consistent format: "Error in content/posts/my-post.md: Missing required field 'date'"
@@ -192,6 +203,7 @@ Use Jinja2 template inheritance with `base.html` providing shared layout:
 ## Configuration Design
 
 ### Required Settings
+
 ```yaml
 site_name: "My Blog"
 base_url: "https://example.com" 
@@ -199,6 +211,7 @@ author: "Author Name"
 ```
 
 ### Optional Settings with Defaults
+
 ```yaml
 timezone: "UTC"              # Default timezone for date handling
 posts_per_page: 10          # For future pagination
@@ -206,6 +219,7 @@ output_dir: "site"          # Output directory name
 ```
 
 ### Validation Rules
+
 - Validate required fields at startup
 - Check that base_url is valid HTTP/HTTPS URL
 - Ensure timezone is valid (use Python's zoneinfo)
@@ -229,9 +243,9 @@ When writing or refactoring code:
 - **Balance** explicitness with rhythm -- the code should read naturally in Python's idiom.
 - When rules conflict, follow this hierarchy:
   1. **Clarity of intent**
-  2. **Simplicity of structure**
-  3. **Depth of abstraction**
-  4. **Harmony with the surrounding codebase**
+  1. **Simplicity of structure**
+  1. **Depth of abstraction**
+  1. **Harmony with the surrounding codebase**
 
 ### 2. Structural Rules
 
@@ -296,10 +310,10 @@ When improving code:
 Before accepting or generating code:
 
 1. Can the purpose be explained in one sentence?
-2. Is the naming intentional and domain-aligned?
-3. Is complexity hidden behind a simple surface?
-4. Could a new contributor follow the flow without external context?
-5. Would this design make the *next change easier*?
+1. Is the naming intentional and domain-aligned?
+1. Is complexity hidden behind a simple surface?
+1. Could a new contributor follow the flow without external context?
+1. Would this design make the *next change easier*?
 
 ### 9. Synthesis
 
