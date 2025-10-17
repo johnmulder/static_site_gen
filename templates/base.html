@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ page_title }} | {{ site.site_name }}{% endblock %}</title>
+    <meta name="description" content="{% block description %}{{ site.description | default('A static site blog') }}{% endblock %}">
+    <link rel="stylesheet" href="/static/style.css">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <nav>
+            <h1><a href="/">{{ site.site_name }}</a></h1>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/about/">About</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>&copy; {{ site.author }} | Built with Python Static Site Generator</p>
+    </footer>
+</body>
+</html>

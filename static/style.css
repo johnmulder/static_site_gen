@@ -1,0 +1,236 @@
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Header and navigation */
+header {
+    border-bottom: 1px solid #eee;
+    margin-bottom: 2rem;
+}
+
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+}
+
+nav h1 {
+    font-size: 1.5rem;
+}
+
+nav h1 a {
+    text-decoration: none;
+    color: #333;
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    gap: 1rem;
+}
+
+nav ul a {
+    text-decoration: none;
+    color: #666;
+    font-weight: 500;
+}
+
+nav ul a:hover {
+    color: #333;
+}
+
+/* Main content */
+main {
+    min-height: calc(100vh - 200px);
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+    margin-bottom: 1rem;
+    line-height: 1.3;
+}
+
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+
+p {
+    margin-bottom: 1rem;
+}
+
+a {
+    color: #0066cc;
+    text-decoration: underline;
+}
+
+a:hover {
+    text-decoration: none;
+}
+
+/* Post and page content */
+.post, .page {
+    margin-bottom: 3rem;
+}
+
+.post-header, .page-header {
+    margin-bottom: 2rem;
+}
+
+.post-meta {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.post-tags {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.tag {
+    background: #f0f0f0;
+    color: #333;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    text-decoration: none;
+    font-size: 0.8rem;
+}
+
+.tag:hover {
+    background: #e0e0e0;
+}
+
+/* Post listings */
+.post-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.post-preview {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1.5rem;
+}
+
+.post-preview:last-child {
+    border-bottom: none;
+}
+
+.post-preview h2 {
+    margin-bottom: 0.5rem;
+}
+
+.post-preview h2 a {
+    text-decoration: none;
+    color: #333;
+}
+
+.post-preview h2 a:hover {
+    color: #0066cc;
+}
+
+.post-excerpt {
+    color: #666;
+    margin-top: 0.5rem;
+}
+
+/* Content styling */
+.post-content, .page-content {
+    line-height: 1.7;
+}
+
+.post-content h2, .page-content h2 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
+.post-content h3, .page-content h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.post-content ul, .page-content ul,
+.post-content ol, .page-content ol {
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.post-content li, .page-content li {
+    margin-bottom: 0.25rem;
+}
+
+.post-content blockquote, .page-content blockquote {
+    border-left: 4px solid #ddd;
+    margin: 1rem 0;
+    padding-left: 1rem;
+    color: #666;
+    font-style: italic;
+}
+
+.post-content code, .page-content code {
+    background: #f5f5f5;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 0.9rem;
+}
+
+.post-content pre, .page-content pre {
+    background: #f5f5f5;
+    padding: 1rem;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+.post-content pre code, .page-content pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Footer */
+footer {
+    border-top: 1px solid #eee;
+    margin-top: 3rem;
+    padding: 2rem 0;
+    text-align: center;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+    body {
+        padding: 0 15px;
+    }
+    
+    nav {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .post-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    h1 { font-size: 1.75rem; }
+    h2 { font-size: 1.375rem; }
+}

@@ -12,4 +12,5 @@ src/static_site_gen.egg-info/dependency_links.txt
 src/static_site_gen.egg-info/entry_points.txt
 src/static_site_gen.egg-info/requires.txt
 src/static_site_gen.egg-info/top_level.txt
+tests/test_integration.py
 tests/test_parser.py
