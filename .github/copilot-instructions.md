@@ -127,6 +127,90 @@ Use Jinja2 template inheritance with `base.html` providing shared layout:
 - Serve locally for testing: `python -m http.server -d site`
 - Configuration changes require full rebuild
 
+## MVP Implementation Priorities
+
+### Phase 1: Core Functionality
+1. **Content Parser** - Parse YAML front matter and Markdown body
+2. **Template Renderer** - Basic Jinja2 rendering with template inheritance
+3. **File Generator** - Create clean URL structure with index.html files
+4. **Static Asset Copy** - Simple file copying from static/ to site/static/
+5. **CLI Interface** - Single `build` command
+
+### Phase 2: Essential Features
+1. **Index Page Generation** - Homepage with chronological post listing
+2. **Tag Pages** - Basic tag archive pages
+3. **Configuration Loading** - YAML config with validation
+4. **Error Handling** - Clear error messages for common issues
+
+## Testing Strategy
+
+### Test Coverage Priorities
+1. **Content Processing Pipeline** - Test each step with sample content
+   - Front matter parsing with various field combinations
+   - Markdown to HTML conversion with common formatting
+   - Slug generation from titles (handle special characters, spaces)
+   - Date parsing and validation
+
+2. **File Operations** - Mock filesystem for unit tests
+   - Directory creation and cleanup
+   - File copying and content writing
+   - Path handling across platforms
+
+3. **Template Rendering** - Test with real template examples
+   - Template inheritance chain (base -> post/index)
+   - Context data passing (post metadata, config settings)
+   - Missing template handling
+
+4. **Integration Tests** - End-to-end with temporary directories
+   - Full build process with sample content
+   - Output file structure validation
+   - Generated HTML content verification
+
+### Testing Conventions
+- Use `pytest` with descriptive test names: `test_slug_generation_handles_unicode_chars()`
+- Fixture for sample content: `sample_post_with_tags`, `sample_config`
+- Test data in `tests/fixtures/` directory
+- One assertion per test when possible for clarity
+
+## Error Handling Approach
+
+### Fail Fast Scenarios (exit immediately)
+- Missing or invalid config.yaml
+- Template directory not found
+- Invalid YAML front matter syntax
+
+### Graceful Handling (log warning, continue)
+- Missing optional front matter fields (tags, description)
+- Invalid dates (skip post or use filename date)
+- Missing static files referenced in content
+
+### Error Message Guidelines
+- Include file path and line number when possible
+- Suggest specific fixes: "Add 'title' field to front matter"
+- Use consistent format: "Error in content/posts/my-post.md: Missing required field 'date'"
+
+## Configuration Design
+
+### Required Settings
+```yaml
+site_name: "My Blog"
+base_url: "https://example.com" 
+author: "Author Name"
+```
+
+### Optional Settings with Defaults
+```yaml
+timezone: "UTC"              # Default timezone for date handling
+posts_per_page: 10          # For future pagination
+output_dir: "site"          # Output directory name
+```
+
+### Validation Rules
+- Validate required fields at startup
+- Check that base_url is valid HTTP/HTTPS URL
+- Ensure timezone is valid (use Python's zoneinfo)
+- Use dataclass with type hints for configuration structure
+
 ## Coding Standards
 
 ### 0. Guiding Ethos
