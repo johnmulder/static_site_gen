@@ -50,6 +50,28 @@ class SiteGenerator:
         self.config = None
         self.renderer = None
 
+    def _resolve_slug_collision(self, slug: str, existing_slugs: set) -> str:
+        """
+        Resolve slug collisions by appending numbers.
+
+        Args:
+            slug: Original slug
+            existing_slugs: Set of already used slugs
+
+        Returns:
+            Unique slug (original or with numeric suffix)
+        """
+        if slug not in existing_slugs:
+            return slug
+
+        # Try numbered suffixes
+        counter = 2
+        while True:
+            candidate = f"{slug}-{counter}"
+            if candidate not in existing_slugs:
+                return candidate
+            counter += 1
+
     def load_config(self) -> Dict[str, Any]:
         """
         Load and validate site configuration.
@@ -98,14 +120,12 @@ class SiteGenerator:
 
         return content_files
 
-    def process_content(
-        self, content_files: Dict[str, List[Path]]
-    ) -> Dict[str, List[Dict[str, Any]]]:
+    def process_content(self, content_files: Dict[str, List[Path]]) -> Dict[str, List]:
         """
-        Parse all content files into structured data.
+        Parse and process all content files.
 
         Args:
-            content_files: Dictionary of content file paths by type
+            content_files: Dictionary with 'posts' and 'pages' file lists
 
         Returns:
             Dictionary with parsed 'posts' and 'pages' data
@@ -117,19 +137,67 @@ class SiteGenerator:
             "markdown_extensions", ["extra", "codehilite", "toc"]
         )
 
-        # Process posts
+        # Process posts with collision detection
+        post_slugs = set()
         for post_file in content_files["posts"]:
             try:
                 post_data = parse_content_file(post_file, markdown_extensions)
+
+                # Check for slug collision and resolve if needed
+                original_slug = post_data.metadata.slug
+                final_slug = self._resolve_slug_collision(original_slug, post_slugs)
+
+                # Update slug if it was changed
+                if final_slug != original_slug:
+                    print(
+                        f"Warning: Slug collision resolved for '{post_data.metadata.title}': '{original_slug}' -> '{final_slug}'"
+                    )
+                    # Create new metadata with updated slug
+                    from .parser import ContentMetadata
+
+                    post_data.metadata = ContentMetadata(
+                        title=post_data.metadata.title,
+                        date=post_data.metadata.date,
+                        slug=final_slug,
+                        tags=post_data.metadata.tags,
+                        draft=post_data.metadata.draft,
+                        description=post_data.metadata.description,
+                    )
+
+                post_slugs.add(final_slug)
                 processed_content["posts"].append(post_data)
             except Exception as e:
                 print(f"Error processing post {post_file}: {e}")
                 continue
 
-        # Process pages
+        # Process pages with collision detection (separate namespace)
+        page_slugs = set()
         for page_file in content_files["pages"]:
             try:
                 page_data = parse_content_file(page_file, markdown_extensions)
+
+                # Check for slug collision and resolve if needed
+                original_slug = page_data.metadata.slug
+                final_slug = self._resolve_slug_collision(original_slug, page_slugs)
+
+                # Update slug if it was changed
+                if final_slug != original_slug:
+                    print(
+                        f"Warning: Page slug collision resolved for '{page_data.metadata.title}': '{original_slug}' -> '{final_slug}'"
+                    )
+                    # Create new metadata with updated slug
+                    from generator.parser import ContentMetadata
+
+                    page_data.metadata = ContentMetadata(
+                        title=page_data.metadata.title,
+                        date=page_data.metadata.date,
+                        slug=final_slug,
+                        tags=page_data.metadata.tags,
+                        draft=page_data.metadata.draft,
+                        description=page_data.metadata.description,
+                    )
+
+                page_slugs.add(final_slug)
                 processed_content["pages"].append(page_data)
             except Exception as e:
                 print(f"Error processing page {page_file}: {e}")
@@ -307,6 +375,9 @@ class SiteGenerator:
         # Load configuration
         print("Loading configuration...")
         self.load_config()
+
+        # Update output directory from config
+        self.output_dir = self.project_root / self.config["output_dir"]
 
         # Initialize renderer
         print("Initializing template renderer...")

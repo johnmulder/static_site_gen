@@ -144,7 +144,7 @@ posts_per_page: 20
 
 ```bash
 # Build the site
-python -m src.cli build
+python -m cli build
 
 # Serve locally for development
 python -m http.server -d site

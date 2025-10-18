@@ -31,12 +31,13 @@ Design principles:
 """
 
 import datetime as dt
+import html
 import re
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import markdown
 import yaml
@@ -231,24 +232,107 @@ def generate_slug(title: str) -> str:
     Returns:
         URL-safe slug in kebab-case
     """
-    # Normalize unicode characters
-    normalized = unicodedata.normalize("NFKD", title)
+    if not title or not title.strip():
+        return "untitled"
 
-    # Convert to ASCII, removing accents
+    title = title.strip()
+
+    # First try: normalize Unicode and convert accented chars to ASCII equivalents
+    normalized = unicodedata.normalize("NFKD", title)
     ascii_title = normalized.encode("ascii", "ignore").decode("ascii")
 
     # Convert to lowercase and replace spaces/special chars with hyphens
     slug = re.sub(r"[^\w\s-]", "", ascii_title.lower())
     slug = re.sub(r"[-\s]+", "-", slug)
-
-    # Remove leading/trailing hyphens
     slug = slug.strip("-")
 
-    # Ensure non-empty slug
-    if not slug:
-        slug = "untitled"
+    # If we got a reasonable slug, use it
+    if slug and len(slug) >= 3:
+        return slug
 
-    return slug
+    # Second try: preserve Unicode letters but still clean up
+    # This handles scripts like Japanese, Chinese, Arabic, etc.
+    unicode_slug = re.sub(r"[^\w\s-]", "", title.lower())
+    unicode_slug = re.sub(r"[-\s]+", "-", unicode_slug)
+    unicode_slug = unicode_slug.strip("-")
+
+    if unicode_slug and len(unicode_slug) >= 1:
+        return unicode_slug
+
+    # Final fallback: generate meaningful slug from title length and first chars
+    # This ensures unique fallbacks for different Unicode-only titles
+    title_hash = abs(hash(title)) % 10000
+    return f"post-{title_hash}"
+
+
+def sanitize_html(html_content: str) -> str:
+    """
+    Sanitize HTML content by removing potentially dangerous tags and attributes.
+
+    Allows safe HTML tags commonly used in blog content while blocking
+    potentially dangerous elements like script, iframe, object, etc.
+
+    Args:
+        html_content: Raw HTML content from markdown conversion
+
+    Returns:
+        Sanitized HTML with dangerous elements removed
+    """
+    # Define allowed HTML tags (from markdown conversion)
+    allowed_tags = {
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",  # Headers
+        "p",
+        "br",
+        "hr",  # Paragraphs and breaks
+        "strong",
+        "b",
+        "em",
+        "i",
+        "u",  # Text formatting
+        "code",
+        "pre",
+        "span",
+        "div",  # Code and containers
+        "ul",
+        "ol",
+        "li",  # Lists
+        "a",
+        "img",  # Links and images
+        "table",
+        "thead",
+        "tbody",
+        "tr",
+        "th",
+        "td",  # Tables
+        "blockquote",  # Quotes
+    }
+
+    # Simple regex-based sanitizer - remove script, iframe, object, embed, etc.
+    dangerous_patterns = [
+        r"<\s*script[^>]*>.*?</script[^>]*>",  # <script> tags
+        r"<\s*iframe[^>]*>.*?</iframe[^>]*>",  # <iframe> tags
+        r"<\s*object[^>]*>.*?</object[^>]*>",  # <object> tags
+        r"<\s*embed[^>]*>.*?</embed[^>]*>",  # <embed> tags
+        r"<\s*form[^>]*>.*?</form[^>]*>",  # <form> tags
+        r"<\s*input[^>]*>",  # <input> tags
+        r"<\s*link[^>]*>",  # <link> tags (except in head)
+        r"<\s*meta[^>]*>",  # <meta> tags
+        r"<\s*style[^>]*>.*?</style[^>]*>",  # <style> tags
+        r'on\w+\s*=\s*["\'][^"\']*["\']',  # on* event handlers
+        r"javascript\s*:",  # javascript: URLs
+    ]
+
+    # Remove dangerous patterns (case insensitive)
+    sanitized = html_content
+    for pattern in dangerous_patterns:
+        sanitized = re.sub(pattern, "", sanitized, flags=re.IGNORECASE | re.DOTALL)
+
+    return sanitized
 
 
 def parse_content_file(
@@ -310,6 +394,9 @@ def parse_content_file(
     extensions = markdown_extensions or ["extra", "codehilite", "toc"]
     md = markdown.Markdown(extensions=extensions)
     html_content = md.convert(markdown_body)
+
+    # Sanitize HTML content to remove dangerous elements
+    html_content = sanitize_html(html_content)
 
     # Create metadata object
     metadata = ContentMetadata(

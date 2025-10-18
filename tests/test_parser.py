@@ -10,8 +10,7 @@ from pathlib import Path
 from textwrap import dedent
 
 import pytest
-
-from generator.parser import (
+from static_site_gen.generator.parser import (
     ContentMetadata,
     ParsedContent,
     ParseError,
@@ -254,7 +253,13 @@ class TestGenerateSlug:
     def test_title_only_special_chars(self):
         """Test slug generation from title with only special characters."""
         result = generate_slug("!@#$%^&*()")
-        assert result == "untitled"
+        # Should generate a unique hash-based slug to prevent collisions
+        assert result.startswith("post-")
+        assert result != "untitled"
+
+        # Should be deterministic - same title produces same slug
+        result2 = generate_slug("!@#$%^&*()")
+        assert result == result2
 
 
 class TestContentMetadata:

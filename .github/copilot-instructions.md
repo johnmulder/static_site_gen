@@ -122,7 +122,7 @@ Use Jinja2 template inheritance with `base.html` providing shared layout:
 
 ## Development Workflow
 
-- Run `python -m src.cli build` to build site
+- Run `python -m cli build` to build site
 - Output goes to `site/` directory
 - Serve locally for testing: `python -m http.server -d site`
 - Configuration changes require full rebuild

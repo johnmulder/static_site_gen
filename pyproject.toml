@@ -40,7 +40,7 @@ dev = [
 ]
 
 [project.scripts]
-static-site-gen = "src.cli:main"
+static-site-gen = "static_site_gen.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/johnmulder/static_site_gen"
@@ -48,14 +48,14 @@ Repository = "https://github.com/johnmulder/static_site_gen.git"
 Issues = "https://github.com/johnmulder/static_site_gen/issues"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+include = ["static_site_gen*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
-addopts = "--verbose --cov=src --cov-report=term-missing"
+addopts = "--verbose --cov=static_site_gen --cov-report=term-missing"
 
 [tool.black]
 line-length = 88

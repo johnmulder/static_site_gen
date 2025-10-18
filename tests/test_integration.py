@@ -8,7 +8,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from generator.core import SiteGenerator
+from static_site_gen.generator.core import SiteGenerator
 
 
 def test_complete_build_pipeline():

@@ -1,0 +1,2 @@
+[console_scripts]
+static-site-gen = static_site_gen.cli:main

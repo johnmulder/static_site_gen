@@ -1,3 +1,38 @@
+Metadata-Version: 2.4
+Name: static-site-gen
+Version: 0.1.0
+Summary: A minimal Python-based static site generator for personal blogs
+Author-email: John Mulder <john@example.com>
+License: MIT
+Project-URL: Homepage, https://github.com/johnmulder/static_site_gen
+Project-URL: Repository, https://github.com/johnmulder/static_site_gen.git
+Project-URL: Issues, https://github.com/johnmulder/static_site_gen/issues
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Internet :: WWW/HTTP :: Site Management
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: markdown>=3.4.0
+Requires-Dist: jinja2>=3.1.0
+Requires-Dist: pyyaml>=6.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: isort>=5.12.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mdformat>=0.7.0; extra == "dev"
+Dynamic: license-file
+
 # Static Site Generator
 
 A minimal static site generation tool for creating a personal blog from Markdown files with YAML front matter.\
