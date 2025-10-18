@@ -38,6 +38,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+import markdown
 import yaml
 
 
@@ -250,12 +251,15 @@ def generate_slug(title: str) -> str:
     return slug
 
 
-def parse_content_file(filepath: Path) -> ParsedContent:
+def parse_content_file(
+    filepath: Path, markdown_extensions: Optional[List[str]] = None
+) -> ParsedContent:
     """
     Parse a Markdown file with YAML front matter.
 
     Args:
         filepath: Path to the content file
+        markdown_extensions: List of markdown extensions to use (defaults to ["extra", "codehilite", "toc"])
 
     Returns:
         ParsedContent object with metadata and content
@@ -302,6 +306,11 @@ def parse_content_file(filepath: Path) -> ParsedContent:
     if description is not None and not isinstance(description, str):
         raise ParseError("Field 'description' must be a string", filepath)
 
+    # Convert Markdown to HTML using configured extensions
+    extensions = markdown_extensions or ["extra", "codehilite", "toc"]
+    md = markdown.Markdown(extensions=extensions)
+    html_content = md.convert(markdown_body)
+
     # Create metadata object
     metadata = ContentMetadata(
         title=front_matter["title"].strip(),
@@ -314,7 +323,7 @@ def parse_content_file(filepath: Path) -> ParsedContent:
 
     return ParsedContent(
         metadata=metadata,
-        content=markdown_body,
+        content=html_content,
         raw_content=raw_content,
         filepath=filepath,
     )

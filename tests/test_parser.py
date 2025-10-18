@@ -336,7 +336,10 @@ class TestParseContentFile:
         assert result.metadata.tags == ["python", "testing", "blog"]
         assert result.metadata.draft is False
         assert result.metadata.description == "A test post for validation"
-        assert "# My Test Post" in result.content
+        # Check that Markdown has been converted to HTML
+        assert '<h1 id="my-test-post">My Test Post</h1>' in result.content
+        assert "<p>This is the content of my test post.</p>" in result.content
+        assert '<h2 id="subsection">Subsection</h2>' in result.content
         assert result.filepath == filepath
         assert result.raw_content == content
 

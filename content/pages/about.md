@@ -1,6 +1,8 @@
-______________________________________________________________________
-
-## title: "About This Site" date: 2025-10-17 description: "Learn more about this static site generator and its author"
+---
+title: "About This Site"
+date: 2025-10-17
+description: "Learn more about this static site generator and its author"
+---
 
 This is a personal blog built using a custom Python static site generator.
 

@@ -16,7 +16,6 @@ from .utils import (
     clean_output_dir,
     collect_posts_by_tag,
     copy_static_files,
-    filter_published_posts,
     generate_page_url,
     generate_post_url,
     generate_tag_url,
@@ -113,10 +112,15 @@ class SiteGenerator:
         """
         processed_content = {"posts": [], "pages": []}
 
+        # Get markdown extensions from config
+        markdown_extensions = self.config.get(
+            "markdown_extensions", ["extra", "codehilite", "toc"]
+        )
+
         # Process posts
         for post_file in content_files["posts"]:
             try:
-                post_data = parse_content_file(post_file)
+                post_data = parse_content_file(post_file, markdown_extensions)
                 processed_content["posts"].append(post_data)
             except Exception as e:
                 print(f"Error processing post {post_file}: {e}")
@@ -125,7 +129,7 @@ class SiteGenerator:
         # Process pages
         for page_file in content_files["pages"]:
             try:
-                page_data = parse_content_file(page_file)
+                page_data = parse_content_file(page_file, markdown_extensions)
                 processed_content["pages"].append(page_data)
             except Exception as e:
                 print(f"Error processing page {page_file}: {e}")
@@ -141,39 +145,9 @@ class SiteGenerator:
             posts: List of ParsedContent objects
         """
         for post in posts:
-            # Convert ParsedContent to dict for template
-            post_dict = {
-                "title": post.metadata.title,
-                "date": post.metadata.date,
-                "slug": post.metadata.slug,
-                "tags": post.metadata.tags,
-                "draft": post.metadata.draft,
-                "description": post.metadata.description,
-                "content": post.content,
-            }
-
-            # Render post HTML
-            html_content = self.renderer.render_post(post_dict, self.config)
-
-            # Generate output path
-            url_path = generate_post_url(post.metadata.slug)
-            output_path = get_output_path(self.output_dir, url_path)
-
-            # Write file
-            write_file(output_path, html_content)
-
-    def generate_index(self, posts: List[Any]) -> None:
-        """
-        Generate homepage with post listing.
-
-        Args:
-            posts: List of ParsedContent objects (will be sorted by date)
-        """
-        # Convert to dict format and sort posts by date (newest first)
-        posts_dict = []
-        for post in posts:
-            posts_dict.append(
-                {
+            try:
+                # Convert ParsedContent to dict for template
+                post_dict = {
                     "title": post.metadata.title,
                     "date": post.metadata.date,
                     "slug": post.metadata.slug,
@@ -182,16 +156,56 @@ class SiteGenerator:
                     "description": post.metadata.description,
                     "content": post.content,
                 }
-            )
 
-        sorted_posts = sort_posts_by_date(posts_dict)
+                # Render post HTML
+                html_content = self.renderer.render_post(post_dict, self.config)
 
-        # Render index HTML
-        html_content = self.renderer.render_index(sorted_posts, self.config)
+                # Generate output path
+                url_path = generate_post_url(post.metadata.slug)
+                output_path = get_output_path(self.output_dir, url_path)
 
-        # Write to root index.html
-        output_path = self.output_dir / "index.html"
-        write_file(output_path, html_content)
+                # Write file
+                write_file(output_path, html_content)
+            except Exception as e:
+                print(
+                    f"Error generating post '{post.metadata.title}' ({post.metadata.slug}): {e}"
+                )
+                continue
+
+    def generate_index(self, posts: List[Any]) -> None:
+        """
+        Generate homepage with post listing.
+
+        Args:
+            posts: List of ParsedContent objects (will be sorted by date)
+        """
+        try:
+            # Convert to dict format and sort posts by date (newest first)
+            posts_dict = []
+            for post in posts:
+                posts_dict.append(
+                    {
+                        "title": post.metadata.title,
+                        "date": post.metadata.date,
+                        "slug": post.metadata.slug,
+                        "tags": post.metadata.tags,
+                        "draft": post.metadata.draft,
+                        "description": post.metadata.description,
+                        "content": post.content,
+                    }
+                )
+
+            sorted_posts = sort_posts_by_date(posts_dict)
+
+            # Render index HTML
+            html_content = self.renderer.render_index(sorted_posts, self.config)
+
+            # Write to root index.html
+            output_path = self.output_dir / "index.html"
+            write_file(output_path, html_content)
+        except Exception as e:
+            print(f"Error generating index page: {e}")
+            raise
 
     def generate_tag_pages(self, posts: List[Any]) -> None:
         """
@@ -218,18 +232,24 @@ class SiteGenerator:
         posts_by_tag = collect_posts_by_tag(posts_dict)
 
         for tag, tag_posts in posts_by_tag.items():
-            # Sort posts by date
-            sorted_posts = sort_posts_by_date(tag_posts)
+            try:
+                # Sort posts by date
+                sorted_posts = sort_posts_by_date(tag_posts)
 
-            # Render tag page HTML
-            html_content = self.renderer.render_tag_page(tag, sorted_posts, self.config)
+                # Render tag page HTML
+                html_content = self.renderer.render_tag_page(
+                    tag, sorted_posts, self.config
+                )
 
-            # Generate output path
-            url_path = generate_tag_url(tag)
-            output_path = get_output_path(self.output_dir, url_path)
+                # Generate output path
+                url_path = generate_tag_url(tag)
+                output_path = get_output_path(self.output_dir, url_path)
 
-            # Write file
-            write_file(output_path, html_content)
+                # Write file
+                write_file(output_path, html_content)
+            except Exception as e:
+                print(f"Error generating tag page for '{tag}': {e}")
+                continue
 
     def generate_pages(self, pages: List[Any]) -> None:
         """
@@ -239,26 +259,32 @@ class SiteGenerator:
             pages: List of ParsedContent objects
         """
         for page in pages:
-            # Convert ParsedContent to dict for template
-            page_dict = {
-                "title": page.metadata.title,
-                "date": page.metadata.date,
-                "slug": page.metadata.slug,
-                "tags": page.metadata.tags,
-                "draft": page.metadata.draft,
-                "description": page.metadata.description,
-                "content": page.content,
-            }
+            try:
+                # Convert ParsedContent to dict for template
+                page_dict = {
+                    "title": page.metadata.title,
+                    "date": page.metadata.date,
+                    "slug": page.metadata.slug,
+                    "tags": page.metadata.tags,
+                    "draft": page.metadata.draft,
+                    "description": page.metadata.description,
+                    "content": page.content,
+                }
 
-            # Render page HTML
-            html_content = self.renderer.render_page(page_dict, self.config)
+                # Render page HTML
+                html_content = self.renderer.render_page(page_dict, self.config)
 
-            # Generate output path
-            url_path = generate_page_url(page.metadata.slug)
-            output_path = get_output_path(self.output_dir, url_path)
+                # Generate output path
+                url_path = generate_page_url(page.metadata.slug)
+                output_path = get_output_path(self.output_dir, url_path)
 
-            # Write file
-            write_file(output_path, html_content)
+                # Write file
+                write_file(output_path, html_content)
+            except Exception as e:
+                print(
+                    f"Error generating page '{page.metadata.title}' ({page.metadata.slug}): {e}"
+                )
+                continue
 
     def copy_assets(self) -> None:
         """

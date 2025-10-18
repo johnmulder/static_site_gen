@@ -6,6 +6,7 @@ and other common tasks used throughout the site generation process.
 """
 
 import shutil
+import urllib.parse
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List
@@ -66,7 +67,9 @@ def generate_tag_url(tag: str) -> str:
     Returns:
         URL path in format: /tag/<tag>/
     """
-    return f"/tag/{tag}/"
+    # URL-encode tag name to handle special characters and spaces
+    encoded_tag = urllib.parse.quote(tag, safe="")
+    return f"/tag/{encoded_tag}/"
 
 
 def generate_page_url(slug: str) -> str:

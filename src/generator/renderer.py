@@ -89,7 +89,7 @@ class TemplateRenderer:
 
         Args:
             posts: List of post metadata dictionaries, sorted by date
-            site_config: Site-1wide configuration data
+            site_config: Site-wide configuration data
 
         Returns:
             Rendered index HTML
