@@ -1,37 +1,11 @@
 """
 Content parsing and validation module.
 
-This module handles the parsing of Markdown files with YAML front matter,
-extracting and validating metadata, and preparing content for rendering.
-Core responsibilities:
-
-- YAML front matter extraction and parsing
-- Markdown body separation and processing
-- Content metadata validation (required/optional fields)
-- Slug generation from titles (kebab-case conversion)
-- Date parsing and timezone handling
-- Tag processing and normalization
-
-Supported front matter schema:
-- Required: title, date
-- Optional: tags (list), draft (boolean), description, slug
-
-The parser handles various edge cases:
-- Missing slugs (auto-generated from title)
-- Invalid dates (graceful error handling)
-- Malformed YAML (clear error messages)
-- Unicode characters in titles and content
-- Empty or missing front matter sections
-
-Design principles:
-- Validate early, fail with clear messages
-- Handle encoding issues gracefully
-- Preserve original content when possible
-- Generate helpful error context (file paths, line numbers)
+Handles parsing of Markdown files with YAML front matter, extracting metadata,
+and preparing content for rendering with HTML sanitization.
 """
 
 import datetime as dt
-import html
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -79,8 +53,8 @@ class ContentMetadata:
         """Normalize data after initialization."""
         if self.tags is None:
             self.tags = []
-        # Normalize tags to lowercase
-        self.tags = [tag.strip().lower() for tag in self.tags if tag.strip()]
+        else:
+            self.tags = [tag.lower().strip() for tag in self.tags if tag.strip()]
 
 
 @dataclass
@@ -107,13 +81,10 @@ def extract_front_matter(content: str, filepath: Path) -> tuple[Dict[str, Any], 
     Raises:
         ParseError: If front matter is malformed or missing
     """
-    # Check for front matter delimiters
     if not content.startswith("---"):
         raise ParseError(
             "Missing YAML front matter (content must start with '---')", filepath
         )
-
-    # Find the end of front matter
     try:
         # Split on second occurrence of ---
         parts = content.split("---", 2)
@@ -132,7 +103,6 @@ def extract_front_matter(content: str, filepath: Path) -> tuple[Dict[str, Any], 
 
         _, front_matter_raw, markdown_body = parts
 
-        # Parse YAML
         try:
             front_matter = yaml.safe_load(front_matter_raw.strip())
             if front_matter is None:
@@ -159,13 +129,10 @@ def validate_front_matter(front_matter: Dict[str, Any], filepath: Path) -> None:
     Raises:
         ParseError: If required fields are missing or invalid
     """
-    # Check required fields
     if "title" not in front_matter:
         raise ParseError("Missing required field 'title'", filepath)
     if "date" not in front_matter:
         raise ParseError("Missing required field 'date'", filepath)
-
-    # Validate title is non-empty string
     title = front_matter["title"]
     if not isinstance(title, str) or not title.strip():
         raise ParseError("Field 'title' must be a non-empty string", filepath)

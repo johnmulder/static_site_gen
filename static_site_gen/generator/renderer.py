@@ -101,6 +101,32 @@ class TemplateRenderer:
         }
         return self.render_template("index.html", context)
 
+    def render_index_page(
+        self, posts: list, site_config: Dict[str, Any], pagination: Dict[str, Any]
+    ) -> str:
+        """
+        Render paginated index page using index.html template.
+
+        Args:
+            posts: List of post metadata dictionaries for this page
+            site_config: Site-wide configuration data
+            pagination: Pagination context (current_page, total_pages, etc.)
+
+        Returns:
+            Rendered paginated index HTML
+        """
+        page_title = site_config.get("site_name", "Blog")
+        if pagination["current_page"] > 1:
+            page_title += f" - Page {pagination['current_page']}"
+
+        context = {
+            "posts": posts,
+            "site": site_config,
+            "pagination": pagination,
+            "page_title": page_title,
+        }
+        return self.render_template("index.html", context)
+
     def render_tag_page(
         self, tag: str, posts: list, site_config: Dict[str, Any]
     ) -> str:

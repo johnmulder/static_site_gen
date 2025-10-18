@@ -17,9 +17,11 @@ from .utils import (
     collect_posts_by_tag,
     copy_static_files,
     generate_page_url,
+    generate_pagination_url,
     generate_post_url,
     generate_tag_url,
     get_output_path,
+    paginate_posts,
     sort_posts_by_date,
     write_file,
 )
@@ -89,14 +91,12 @@ class SiteGenerator:
         with open(self.config_file, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
 
-        # Validate required fields
         required_fields = ["site_name", "base_url", "author"]
         missing_fields = [field for field in required_fields if field not in config]
 
         if missing_fields:
             raise ValueError(f"Missing required config fields: {missing_fields}")
 
-        # Set defaults for optional fields
         config.setdefault("timezone", "UTC")
         config.setdefault("output_dir", "site")
 
@@ -214,7 +214,6 @@ class SiteGenerator:
         """
         for post in posts:
             try:
-                # Convert ParsedContent to dict for template
                 post_dict = {
                     "title": post.metadata.title,
                     "date": post.metadata.date,
@@ -225,14 +224,9 @@ class SiteGenerator:
                     "content": post.content,
                 }
 
-                # Render post HTML
                 html_content = self.renderer.render_post(post_dict, self.config)
-
-                # Generate output path
                 url_path = generate_post_url(post.metadata.slug)
                 output_path = get_output_path(self.output_dir, url_path)
-
-                # Write file
                 write_file(output_path, html_content)
             except Exception as e:
                 print(
@@ -240,9 +234,9 @@ class SiteGenerator:
                 )
                 continue
 
-    def generate_index(self, posts: List[Any]) -> None:
+    def generate_index(self, posts: List) -> None:
         """
-        Generate homepage with post listing.
+        Generate homepage with chronologically sorted posts, including pagination.
 
         Args:
             posts: List of ParsedContent objects (will be sorted by date)
@@ -265,14 +259,41 @@ class SiteGenerator:
 
             sorted_posts = sort_posts_by_date(posts_dict)
 
-            # Render index HTML
-            html_content = self.renderer.render_index(sorted_posts, self.config)
+            # Get pagination settings from config
+            posts_per_page = self.config.get("posts_per_page", 10)
 
-            # Write to root index.html
-            output_path = self.output_dir / "index.html"
-            write_file(output_path, html_content)
+            # Create paginated pages
+            pages = paginate_posts(sorted_posts, posts_per_page)
+
+            # Generate each page
+            for page_info in pages:
+                if page_info["page_number"] == 1:
+                    # First page goes to root index.html
+                    output_path = self.output_dir / "index.html"
+                else:
+                    # Other pages go to /page/N/index.html
+                    page_dir = self.output_dir / "page" / str(page_info["page_number"])
+                    page_dir.mkdir(parents=True, exist_ok=True)
+                    output_path = page_dir / "index.html"
+
+                # Extract posts and pagination info from page_info
+                posts = page_info["posts"]
+                pagination = {
+                    "current_page": page_info["page_number"],
+                    "total_pages": page_info["total_pages"],
+                    "has_prev": page_info["has_previous"],
+                    "has_next": page_info["has_next"],
+                    "prev_url": page_info["previous_url"],
+                    "next_url": page_info["next_url"],
+                }
+
+                html_content = self.renderer.render_index_page(
+                    posts, self.config, pagination
+                )
+                write_file(output_path, html_content)
+
         except Exception as e:
-            print(f"Error generating index page: {e}")
+            print(f"Error generating index pages: {e}")
             raise
 
     def generate_tag_pages(self, posts: List[Any]) -> None:

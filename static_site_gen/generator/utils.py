@@ -229,3 +229,81 @@ def clean_output_dir(output_dir: Path) -> None:
     if output_dir.exists():
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True)
+
+
+def paginate_posts(
+    posts: List[Dict[str, Any]], posts_per_page: int
+) -> List[Dict[str, Any]]:
+    """
+    Split posts into pages for pagination.
+
+    Args:
+        posts: List of post dictionaries sorted by date
+        posts_per_page: Number of posts per page
+
+    Returns:
+        List of page dictionaries with pagination info
+    """
+    if posts_per_page <= 0:
+        raise ValueError("posts_per_page must be positive")
+
+    if not posts:
+        return [
+            {
+                "posts": [],
+                "page_number": 1,
+                "total_pages": 1,
+                "has_previous": False,
+                "has_next": False,
+                "previous_url": None,
+                "next_url": None,
+            }
+        ]
+
+    total_posts = len(posts)
+    total_pages = (total_posts + posts_per_page - 1) // posts_per_page
+    pages = []
+
+    for page_num in range(1, total_pages + 1):
+        start_idx = (page_num - 1) * posts_per_page
+        end_idx = start_idx + posts_per_page
+        page_posts = posts[start_idx:end_idx]
+
+        # Generate pagination URLs
+        previous_url = None
+        next_url = None
+
+        if page_num > 1:
+            previous_url = "/" if page_num == 2 else f"/page/{page_num - 1}/"
+
+        if page_num < total_pages:
+            next_url = f"/page/{page_num + 1}/"
+
+        pages.append(
+            {
+                "posts": page_posts,
+                "page_number": page_num,
+                "total_pages": total_pages,
+                "has_previous": page_num > 1,
+                "has_next": page_num < total_pages,
+                "previous_url": previous_url,
+                "next_url": next_url,
+            }
+        )
+
+    return pages
+
+
+def generate_pagination_url(page_number: int) -> str:
+    """
+    Generate URL for a pagination page.
+
+    Args:
+        page_number: Page number (1-based)
+
+    Returns:
+        URL path for the page
+    """
+    if page_number <= 1:
+        return "/"
+    return f"/page/{page_number}/"

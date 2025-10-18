@@ -4,26 +4,25 @@
 
 {% block content %}
 <section class="tag-archive">
-    <h1>Posts tagged "{{ tag }}"</h1>
+    <div class="page-header">
+        <h1>Posts tagged "{{ tag }}"</h1>
+        <p><a href="/" class="back-link">← Back to home</a></p>
+    </div>
     
     {% if posts %}
-    <div class="post-list">
+    <div class="post-listing">
         {% for post in posts %}
-        <article class="post-preview">
-            <h2><a href="/posts/{{ post.slug }}/">{{ post.title }}</a></h2>
-            <div class="post-meta">
-                <time datetime="{{ post.date.isoformat() }}">{{ post.date.strftime('%B %d, %Y') }}</time>
-            </div>
-            {% if post.description %}
-            <p class="post-excerpt">{{ post.description }}</p>
-            {% endif %}
+        <article class="post-item">
+            <h1 class="post-title">
+                <a href="/posts/{{ post.slug }}/">{{ post.title }}</a>
+            </h1>
         </article>
         {% endfor %}
     </div>
     {% else %}
-    <p>No posts found with tag "{{ tag }}".</p>
+    <div class="empty-state">
+        <p>No posts found with tag "{{ tag }}".</p>
+    </div>
     {% endif %}
-    
-    <p><a href="/">← Back to home</a></p>
 </section>
 {% endblock %}

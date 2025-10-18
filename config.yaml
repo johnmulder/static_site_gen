@@ -10,7 +10,7 @@ author: "Author Name"
 
 # Optional Settings (with defaults)
 timezone: "UTC"                    # Timezone for date handling (use IANA timezone names)
-posts_per_page: 10                # For future pagination feature
+posts_per_page: 5                 # Posts per page for pagination
 output_dir: "site"                # Output directory name (relative to project root)
 
 # Site Metadata (optional)
@@ -24,7 +24,6 @@ markdown_extensions:              # Additional Markdown extensions to enable
   - "toc"                        # Table of contents generation
 
 # Future Configuration Options (not yet implemented)
-# pagination: true               # Enable pagination for post lists
 # rss_feed: true                # Generate RSS feed
 # sitemap: true                 # Generate sitemap.xml
 # comments: false               # Comment system integration
