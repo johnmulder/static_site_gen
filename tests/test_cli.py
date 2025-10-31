@@ -36,7 +36,6 @@ class TestCLI:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
-            # Create minimal project structure
             (temp_path / "config.yaml").write_text(
                 """
 site_name: "Test Site"
@@ -48,8 +47,6 @@ author: "Test Author"
             (temp_path / "content").mkdir()
             (temp_path / "templates").mkdir()
             (temp_path / "static").mkdir()
-
-            # Create minimal templates
             (temp_path / "templates" / "base.html").write_text(
                 """
 <!DOCTYPE html>
@@ -73,15 +70,13 @@ author: "Test Author"
             ):
                 exit_code = main()
 
-            # Verify build completed successfully
             assert exit_code == 0
-            assert (temp_path / "site").exists()  # Site directory should be created
+            assert (temp_path / "site").exists()
 
     def test_main_with_init_command(self):
         """Test main function with init command."""
         with patch("sys.argv", ["cli.py", "init", "test-project"]):
             exit_code = main()
-            # Init command currently returns 1 (not implemented)
             assert exit_code == 1
 
     def test_main_with_unknown_command(self):
@@ -93,7 +88,7 @@ author: "Test Author"
         ):
             main()
 
-        assert exc_info.value.code == 2  # argparse error code
+        assert exc_info.value.code == 2
         error_output = mock_stderr.getvalue()
         assert (
             "unknown" in error_output.lower()
@@ -105,7 +100,6 @@ author: "Test Author"
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
-            # Create project structure
             (temp_path / "config.yaml").write_text(
                 """
 site_name: "Test Site"
@@ -117,8 +111,6 @@ author: "Test Author"
             (temp_path / "content").mkdir()
             (temp_path / "templates").mkdir()
             (temp_path / "static").mkdir()
-
-            # Create templates
             (temp_path / "templates" / "base.html").write_text(
                 """
 <!DOCTYPE html>
@@ -136,16 +128,13 @@ author: "Test Author"
 """
             )
 
-            # Mock args with correct attribute name
             args = Mock()
             args.project_dir = str(temp_path)
 
-            # Should complete without errors
             exit_code = cmd_build(args)
 
-            # Verify success
             assert exit_code == 0
-            assert (temp_path / "site").exists()  # Site directory should be created
+            assert (temp_path / "site").exists()
 
     def test_cmd_build_with_missing_config(self):
         """Test build command with missing configuration file."""
@@ -155,7 +144,6 @@ author: "Test Author"
             args = Mock()
             args.project_dir = str(temp_path)
 
-            # Should return error code instead of raising
             exit_code = cmd_build(args)
             assert exit_code == 1
 
@@ -164,7 +152,6 @@ author: "Test Author"
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
-            # Create invalid config
             (temp_path / "config.yaml").write_text(
                 """
 invalid: yaml: structure::
@@ -174,7 +161,6 @@ invalid: yaml: structure::
             args = Mock()
             args.project_dir = str(temp_path)
 
-            # Should return error code instead of raising
             exit_code = cmd_build(args)
             assert exit_code == 1
 
@@ -183,7 +169,6 @@ invalid: yaml: structure::
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
-            # Create config but no other directories
             (temp_path / "config.yaml").write_text(
                 """
 site_name: "Test Site"
@@ -195,7 +180,6 @@ author: "Test Author"
             args = Mock()
             args.project_dir = str(temp_path)
 
-            # Should return error code instead of raising
             exit_code = cmd_build(args)
             assert exit_code == 1
 
@@ -207,7 +191,6 @@ author: "Test Author"
             args = Mock()
             args.project_name = "test-project"
 
-            # Currently returns 1 because not implemented
             exit_code = cmd_init(args)
             assert exit_code == 1
 
@@ -217,17 +200,16 @@ author: "Test Author"
         args.project_name = "test-project"
 
         exit_code = cmd_init(args)
-        assert exit_code == 1  # Not implemented yet
+        assert exit_code == 1
 
     def test_error_handling_in_main(self):
         """Test error handling in main function."""
-        # Test with build command that returns error code
         with patch("sys.argv", ["cli.py", "build", "--project-dir", "/nonexistent"]):
             exit_code = main()
-            assert exit_code == 1  # Should return error code
+            assert exit_code == 1
 
     def test_main_no_args_shows_help(self):
         """Test that main with no args shows help."""
         with patch("sys.argv", ["cli.py"]):
             exit_code = main()
-            assert exit_code == 1  # Returns 1 when showing help
+            assert exit_code == 1

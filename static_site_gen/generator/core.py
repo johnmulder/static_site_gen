@@ -6,7 +6,7 @@ the entire content -> template -> output pipeline.
 """
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import yaml
 
@@ -49,8 +49,8 @@ class SiteGenerator:
         self.static_dir = project_root / "static"
         self.output_dir = project_root / "site"
 
-        self.config = None
-        self.renderer = None
+        self.config: Optional[Dict[str, Any]] = None
+        self.renderer: Optional[TemplateRenderer] = None
 
     def _resolve_slug_collision(self, slug: str, existing_slugs: set) -> str:
         """
@@ -66,7 +66,6 @@ class SiteGenerator:
         if slug not in existing_slugs:
             return slug
 
-        # Try numbered suffixes
         counter = 2
         while True:
             candidate = f"{slug}-{counter}"
@@ -100,7 +99,6 @@ class SiteGenerator:
         config.setdefault("timezone", "UTC")
         config.setdefault("output_dir", "site")
 
-        # Validate numeric configuration values
         posts_per_page = config.get("posts_per_page", 10)
         if not isinstance(posts_per_page, int) or posts_per_page <= 0:
             raise ValueError(
@@ -137,29 +135,28 @@ class SiteGenerator:
         Returns:
             Dictionary with parsed 'posts' and 'pages' data
         """
+        assert (
+            self.config is not None
+        ), "Configuration must be loaded before processing content"
+
         processed_content = {"posts": [], "pages": []}
 
-        # Get markdown extensions from config
         markdown_extensions = self.config.get(
             "markdown_extensions", ["extra", "codehilite", "toc"]
         )
 
-        # Process posts with collision detection
         post_slugs = set()
         for post_file in content_files["posts"]:
             try:
                 post_data = parse_content_file(post_file, markdown_extensions)
 
-                # Check for slug collision and resolve if needed
                 original_slug = post_data.metadata.slug
                 final_slug = self._resolve_slug_collision(original_slug, post_slugs)
 
-                # Update slug if it was changed
                 if final_slug != original_slug:
                     print(
                         f"Warning: Slug collision resolved for '{post_data.metadata.title}': '{original_slug}' -> '{final_slug}'"
                     )
-                    # Create new metadata with updated slug
                     from .parser import ContentMetadata
 
                     post_data.metadata = ContentMetadata(
@@ -177,22 +174,18 @@ class SiteGenerator:
                 print(f"Error processing post {post_file}: {e}")
                 continue
 
-        # Process pages with collision detection (separate namespace)
         page_slugs = set()
         for page_file in content_files["pages"]:
             try:
                 page_data = parse_content_file(page_file, markdown_extensions)
 
-                # Check for slug collision and resolve if needed
                 original_slug = page_data.metadata.slug
                 final_slug = self._resolve_slug_collision(original_slug, page_slugs)
 
-                # Update slug if it was changed
                 if final_slug != original_slug:
                     print(
                         f"Warning: Page slug collision resolved for '{page_data.metadata.title}': '{original_slug}' -> '{final_slug}'"
                     )
-                    # Create new metadata with updated slug
                     from .parser import ContentMetadata
 
                     page_data.metadata = ContentMetadata(
@@ -219,6 +212,13 @@ class SiteGenerator:
         Args:
             posts: List of ParsedContent objects
         """
+        assert (
+            self.renderer is not None
+        ), "Renderer must be initialized before generating posts"
+        assert (
+            self.config is not None
+        ), "Configuration must be loaded before generating posts"
+
         for post in posts:
             try:
                 post_dict = {
@@ -248,8 +248,14 @@ class SiteGenerator:
         Args:
             posts: List of ParsedContent objects (will be sorted by date)
         """
+        assert (
+            self.renderer is not None
+        ), "Renderer must be initialized before generating index"
+        assert (
+            self.config is not None
+        ), "Configuration must be loaded before generating index"
+
         try:
-            # Convert to dict format and sort posts by date (newest first)
             posts_dict = []
             for post in posts:
                 posts_dict.append(
@@ -266,24 +272,18 @@ class SiteGenerator:
 
             sorted_posts = sort_posts_by_date(posts_dict)
 
-            # Get pagination settings from config
             posts_per_page = self.config.get("posts_per_page", 10)
 
-            # Create paginated pages
             pages = paginate_posts(sorted_posts, posts_per_page)
 
-            # Generate each page
             for page_info in pages:
                 if page_info["page_number"] == 1:
-                    # First page goes to root index.html
                     output_path = self.output_dir / "index.html"
                 else:
-                    # Other pages go to /page/N/index.html
                     page_dir = self.output_dir / "page" / str(page_info["page_number"])
                     page_dir.mkdir(parents=True, exist_ok=True)
                     output_path = page_dir / "index.html"
 
-                # Extract posts and pagination info from page_info
                 posts = page_info["posts"]
                 pagination = {
                     "current_page": page_info["page_number"],
@@ -310,7 +310,13 @@ class SiteGenerator:
         Args:
             posts: List of ParsedContent objects
         """
-        # Convert to dict format
+        assert (
+            self.renderer is not None
+        ), "Renderer must be initialized before generating tag pages"
+        assert (
+            self.config is not None
+        ), "Configuration must be loaded before generating tag pages"
+
         posts_dict = []
         for post in posts:
             posts_dict.append(
@@ -329,19 +335,15 @@ class SiteGenerator:
 
         for tag, tag_posts in posts_by_tag.items():
             try:
-                # Sort posts by date
                 sorted_posts = sort_posts_by_date(tag_posts)
 
-                # Render tag page HTML
                 html_content = self.renderer.render_tag_page(
                     tag, sorted_posts, self.config
                 )
 
-                # Generate output path
                 url_path = generate_tag_url(tag)
                 output_path = get_output_path(self.output_dir, url_path)
 
-                # Write file
                 write_file(output_path, html_content)
             except Exception as e:
                 print(f"Error generating tag page for '{tag}': {e}")
@@ -354,9 +356,15 @@ class SiteGenerator:
         Args:
             pages: List of ParsedContent objects
         """
+        assert (
+            self.renderer is not None
+        ), "Renderer must be initialized before generating pages"
+        assert (
+            self.config is not None
+        ), "Configuration must be loaded before generating pages"
+
         for page in pages:
             try:
-                # Convert ParsedContent to dict for template
                 page_dict = {
                     "title": page.metadata.title,
                     "date": page.metadata.date,
@@ -367,14 +375,11 @@ class SiteGenerator:
                     "content": page.content,
                 }
 
-                # Render page HTML
                 html_content = self.renderer.render_page(page_dict, self.config)
 
-                # Generate output path
                 url_path = generate_page_url(page.metadata.slug)
                 output_path = get_output_path(self.output_dir, url_path)
 
-                # Write file
                 write_file(output_path, html_content)
             except Exception as e:
                 print(
@@ -400,22 +405,17 @@ class SiteGenerator:
         """
         print("Starting site build...")
 
-        # Load configuration
         print("Loading configuration...")
         self.load_config()
+        assert self.config is not None, "Configuration should be loaded"
 
-        # Update output directory from config
         self.output_dir = self.project_root / self.config["output_dir"]
 
-        # Initialize renderer
         print("Initializing template renderer...")
         self.renderer = TemplateRenderer(self.template_dir)
 
-        # Clean output directory
         print("Cleaning output directory...")
         clean_output_dir(self.output_dir)
-
-        # Discover content files
         print("Discovering content files...")
         content_files = self.discover_content()
         print(

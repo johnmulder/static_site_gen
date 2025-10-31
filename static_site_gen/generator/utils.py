@@ -36,11 +36,9 @@ def copy_static_files(source_dir: Path, dest_dir: Path) -> None:
     if not source_dir.exists():
         raise FileNotFoundError(f"Static source directory not found: {source_dir}")
 
-    # Remove existing destination directory if it exists
     if dest_dir.exists():
         shutil.rmtree(dest_dir)
 
-    # Copy entire directory tree
     shutil.copytree(source_dir, dest_dir)
 
 
@@ -67,7 +65,6 @@ def generate_tag_url(tag: str) -> str:
     Returns:
         URL path in format: /tag/<tag>/
     """
-    # URL-encode tag name to handle special characters and spaces
     encoded_tag = urllib.parse.quote(tag, safe="")
     return f"/tag/{encoded_tag}/"
 
@@ -99,8 +96,6 @@ def get_output_path(base_dir: Path, url_path: str) -> Path:
     Raises:
         ValueError: If url_path contains path traversal attempts or invalid characters
     """
-    # Security: Sanitize URL path to prevent directory traversal attacks
-    # First decode any URL-encoded characters to catch encoded traversal attempts
     import urllib.parse
 
     decoded_path = urllib.parse.unquote(url_path)
@@ -108,33 +103,26 @@ def get_output_path(base_dir: Path, url_path: str) -> Path:
     if ".." in url_path or ".." in decoded_path:
         raise ValueError(f"Path traversal attempt detected in URL path: {url_path}")
 
-    # Remove leading slash and normalize path separators
     relative_path = url_path.strip("/")
 
-    # Additional security: reject paths with backslashes (Windows-style traversal)
     if "\\" in relative_path:
         raise ValueError(f"Invalid path separator in URL path: {url_path}")
 
     if not relative_path:
-        # Root path
         return base_dir / "index.html"
     else:
-        # Construct path and verify it stays within base_dir
         output_path = base_dir / relative_path / "index.html"
 
-        # Security: Resolve paths and ensure result is within base_dir
         try:
             resolved_base = base_dir.resolve()
             resolved_output = output_path.resolve()
 
-            # Check if the resolved output path starts with the base directory
             if not str(resolved_output).startswith(str(resolved_base)):
                 raise ValueError(
                     f"Path traversal attempt: {url_path} would write outside base directory"
                 )
 
         except (OSError, ValueError):
-            # If path resolution fails or traversal detected, reject
             raise ValueError(f"Invalid or dangerous path: {url_path}")
 
         return output_path
@@ -213,16 +201,13 @@ def clean_output_dir(output_dir: Path) -> None:
     Raises:
         ValueError: If output directory path appears unsafe
     """
-    # Safety checks to prevent accidental deletion of important directories
     resolved_output = output_dir.resolve()
 
-    # Don't allow cleaning root directory or parent directories
     if str(resolved_output) in ["/", "/Users", "/home", "/System", "/Applications"]:
         raise ValueError(
             f"Refusing to clean potentially dangerous directory: {resolved_output}"
         )
 
-    # Don't allow cleaning directories that contain critical system files
     critical_files = [".bash_profile", ".bashrc", ".zshrc", "Desktop", "Documents"]
     if any(
         (resolved_output / critical_file).exists() for critical_file in critical_files
@@ -274,7 +259,6 @@ def paginate_posts(
         end_idx = start_idx + posts_per_page
         page_posts = posts[start_idx:end_idx]
 
-        # Generate pagination URLs
         previous_url = None
         next_url = None
 
