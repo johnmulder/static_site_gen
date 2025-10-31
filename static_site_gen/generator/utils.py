@@ -100,7 +100,11 @@ def get_output_path(base_dir: Path, url_path: str) -> Path:
         ValueError: If url_path contains path traversal attempts or invalid characters
     """
     # Security: Sanitize URL path to prevent directory traversal attacks
-    if ".." in url_path:
+    # First decode any URL-encoded characters to catch encoded traversal attempts
+    import urllib.parse
+    decoded_path = urllib.parse.unquote(url_path)
+    
+    if ".." in url_path or ".." in decoded_path:
         raise ValueError(f"Path traversal attempt detected in URL path: {url_path}")
 
     # Remove leading slash and normalize path separators

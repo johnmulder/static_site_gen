@@ -59,7 +59,7 @@ addopts = "--verbose --cov=static_site_gen --cov-report=term-missing"
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py39']
 include = '\.pyi?$'
 
 [tool.isort]
@@ -101,3 +101,4 @@ exclude_lines = [
     "if 0:",
     "if __name__ == .__main__.:",
 ]
+

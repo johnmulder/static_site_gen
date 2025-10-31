@@ -99,6 +99,11 @@ class SiteGenerator:
 
         config.setdefault("timezone", "UTC")
         config.setdefault("output_dir", "site")
+        
+        # Validate numeric configuration values
+        posts_per_page = config.get("posts_per_page", 10)
+        if not isinstance(posts_per_page, int) or posts_per_page <= 0:
+            raise ValueError(f"posts_per_page must be a positive integer, got: {posts_per_page}")
 
         self.config = config
         return config
@@ -186,7 +191,7 @@ class SiteGenerator:
                         f"Warning: Page slug collision resolved for '{page_data.metadata.title}': '{original_slug}' -> '{final_slug}'"
                     )
                     # Create new metadata with updated slug
-                    from generator.parser import ContentMetadata
+                    from .parser import ContentMetadata
 
                     page_data.metadata = ContentMetadata(
                         title=page_data.metadata.title,

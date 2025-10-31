@@ -20,9 +20,11 @@ class TestCLI:
 
     def test_main_with_help_flag(self):
         """Test main function with help flag."""
-        with patch("sys.argv", ["cli.py", "--help"]), patch(
-            "sys.stdout", new_callable=StringIO
-        ) as mock_stdout, pytest.raises(SystemExit) as exc_info:
+        with (
+            patch("sys.argv", ["cli.py", "--help"]),
+            patch("sys.stdout", new_callable=StringIO) as mock_stdout,
+            pytest.raises(SystemExit) as exc_info,
+        ):
             main()
 
         assert exc_info.value.code == 0
@@ -52,7 +54,7 @@ author: "Test Author"
                 """
 <!DOCTYPE html>
 <html>
-<head><title>{{ config.site_name }}</title></head>
+<head><title>{{ site.site_name }}</title></head>
 <body>{% block content %}{% endblock %}</body>
 </html>
 """
@@ -61,20 +63,21 @@ author: "Test Author"
             (temp_path / "templates" / "index.html").write_text(
                 """
 {% extends "base.html" %}
-{% block content %}<h1>{{ config.site_name }}</h1>{% endblock %}
+{% block content %}<h1>{{ site.site_name }}</h1>{% endblock %}
 """
             )
 
-            with patch("sys.argv", ["cli.py", "build"]), patch(
-                "os.getcwd", return_value=str(temp_path)
+            with (
+                patch("sys.argv", ["cli.py", "build"]),
+                patch("os.getcwd", return_value=str(temp_path)),
             ):
                 exit_code = main()
 
             # Verify build completed successfully
             assert exit_code == 0
-            assert (
-                temp_path / "site"
-            ).exists()  # Site directory should be created    def test_main_with_init_command(self):
+            assert (temp_path / "site").exists()  # Site directory should be created
+
+    def test_main_with_init_command(self):
         """Test main function with init command."""
         with patch("sys.argv", ["cli.py", "init", "test-project"]):
             exit_code = main()
@@ -83,9 +86,11 @@ author: "Test Author"
 
     def test_main_with_unknown_command(self):
         """Test main function with unknown command."""
-        with patch("sys.argv", ["cli.py", "unknown"]), patch(
-            "sys.stderr", new_callable=StringIO
-        ) as mock_stderr, pytest.raises(SystemExit) as exc_info:
+        with (
+            patch("sys.argv", ["cli.py", "unknown"]),
+            patch("sys.stderr", new_callable=StringIO) as mock_stderr,
+            pytest.raises(SystemExit) as exc_info,
+        ):
             main()
 
         assert exc_info.value.code == 2  # argparse error code
@@ -118,7 +123,7 @@ author: "Test Author"
                 """
 <!DOCTYPE html>
 <html>
-<head><title>{{ config.site_name }}</title></head>
+<head><title>{{ site.site_name }}</title></head>
 <body>{% block content %}{% endblock %}</body>
 </html>
 """
@@ -127,7 +132,7 @@ author: "Test Author"
             (temp_path / "templates" / "index.html").write_text(
                 """
 {% extends "base.html" %}
-{% block content %}<h1>{{ config.site_name }}</h1>{% endblock %}
+{% block content %}<h1>{{ site.site_name }}</h1>{% endblock %}
 """
             )
 
@@ -140,9 +145,9 @@ author: "Test Author"
 
             # Verify success
             assert exit_code == 0
-            assert (
-                temp_path / "site"
-            ).exists()  # Site directory should be created    def test_cmd_build_with_missing_config(self):
+            assert (temp_path / "site").exists()  # Site directory should be created
+
+    def test_cmd_build_with_missing_config(self):
         """Test build command with missing configuration file."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
