@@ -90,11 +90,32 @@ class SiteGenerator:
         with open(self.config_file, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
 
+        if config is None:
+            raise ValueError("Configuration file is empty or invalid")
+
         required_fields = ["site_name", "base_url", "author"]
         missing_fields = [field for field in required_fields if field not in config]
 
         if missing_fields:
             raise ValueError(f"Missing required config fields: {missing_fields}")
+
+        # Validate that required fields are not null or empty
+        invalid_fields = []
+        for field in required_fields:
+            value = config[field]
+            if value is None:
+                invalid_fields.append(f"{field} is null")
+            elif isinstance(value, str) and not value.strip():
+                invalid_fields.append(f"{field} is empty")
+            elif not isinstance(value, str):
+                invalid_fields.append(
+                    f"{field} must be a string, got {type(value).__name__}"
+                )
+
+        if invalid_fields:
+            raise ValueError(
+                f"Invalid required config fields: {', '.join(invalid_fields)}"
+            )
 
         config.setdefault("timezone", "UTC")
         config.setdefault("output_dir", "site")
@@ -144,11 +165,12 @@ class SiteGenerator:
         markdown_extensions = self.config.get(
             "markdown_extensions", ["extra", "codehilite", "toc"]
         )
+        timezone = self.config.get("timezone", "UTC")
 
         post_slugs = set()
         for post_file in content_files["posts"]:
             try:
-                post_data = parse_content_file(post_file, markdown_extensions)
+                post_data = parse_content_file(post_file, markdown_extensions, timezone)
 
                 original_slug = post_data.metadata.slug
                 final_slug = self._resolve_slug_collision(original_slug, post_slugs)
@@ -157,16 +179,10 @@ class SiteGenerator:
                     print(
                         f"Warning: Slug collision resolved for '{post_data.metadata.title}': '{original_slug}' -> '{final_slug}'"
                     )
-                    from .parser import ContentMetadata
+                    from dataclasses import replace
 
-                    post_data.metadata = ContentMetadata(
-                        title=post_data.metadata.title,
-                        date=post_data.metadata.date,
-                        slug=final_slug,
-                        tags=post_data.metadata.tags,
-                        draft=post_data.metadata.draft,
-                        description=post_data.metadata.description,
-                    )
+                    # Preserve all original metadata, only changing the slug
+                    post_data.metadata = replace(post_data.metadata, slug=final_slug)
 
                 post_slugs.add(final_slug)
                 processed_content["posts"].append(post_data)
@@ -177,7 +193,7 @@ class SiteGenerator:
         page_slugs = set()
         for page_file in content_files["pages"]:
             try:
-                page_data = parse_content_file(page_file, markdown_extensions)
+                page_data = parse_content_file(page_file, markdown_extensions, timezone)
 
                 original_slug = page_data.metadata.slug
                 final_slug = self._resolve_slug_collision(original_slug, page_slugs)
@@ -186,16 +202,10 @@ class SiteGenerator:
                     print(
                         f"Warning: Page slug collision resolved for '{page_data.metadata.title}': '{original_slug}' -> '{final_slug}'"
                     )
-                    from .parser import ContentMetadata
+                    from dataclasses import replace
 
-                    page_data.metadata = ContentMetadata(
-                        title=page_data.metadata.title,
-                        date=page_data.metadata.date,
-                        slug=final_slug,
-                        tags=page_data.metadata.tags,
-                        draft=page_data.metadata.draft,
-                        description=page_data.metadata.description,
-                    )
+                    # Preserve all original metadata, only changing the slug
+                    page_data.metadata = replace(page_data.metadata, slug=final_slug)
 
                 page_slugs.add(final_slug)
                 processed_content["pages"].append(page_data)

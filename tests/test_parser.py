@@ -170,46 +170,62 @@ class TestParseDate:
 
     def test_datetime_object(self, tmp_path):
         """Test parsing when date is already a datetime object."""
+        from zoneinfo import ZoneInfo
+
         date_obj = datetime(2025, 10, 17)
         filepath = tmp_path / "test.md"
 
-        result = parse_date(date_obj, filepath)
-        assert result == date_obj
+        result = parse_date(date_obj, filepath, timezone="UTC")
+        # Should now be timezone-aware (UTC by default)
+        expected = datetime(2025, 10, 17, tzinfo=ZoneInfo("UTC"))
+        assert result == expected
 
     def test_date_string_basic(self, tmp_path):
         """Test parsing basic date string."""
+        from zoneinfo import ZoneInfo
+
         filepath = tmp_path / "test.md"
 
-        result = parse_date("2025-10-17", filepath)
-        assert result == datetime(2025, 10, 17)
+        result = parse_date("2025-10-17", filepath, timezone="UTC")
+        # Should now be timezone-aware (UTC by default)
+        expected = datetime(2025, 10, 17, tzinfo=ZoneInfo("UTC"))
+        assert result == expected
 
     def test_date_string_with_time(self, tmp_path):
         """Test parsing date string with time."""
+        from zoneinfo import ZoneInfo
+
         filepath = tmp_path / "test.md"
 
-        result = parse_date("2025-10-17 14:30:00", filepath)
-        assert result == datetime(2025, 10, 17, 14, 30, 0)
+        result = parse_date("2025-10-17 14:30:00", filepath, timezone="UTC")
+        # Should now be timezone-aware (UTC by default)
+        expected = datetime(2025, 10, 17, 14, 30, 0, tzinfo=ZoneInfo("UTC"))
+        assert result == expected
 
     def test_date_string_with_time_no_seconds(self, tmp_path):
         """Test parsing date string with time (no seconds)."""
+        from zoneinfo import ZoneInfo
+
         filepath = tmp_path / "test.md"
 
-        result = parse_date("2025-10-17 14:30", filepath)
-        assert result == datetime(2025, 10, 17, 14, 30)
+        result = parse_date("2025-10-17 14:30", filepath, timezone="UTC")
+        # Should now be timezone-aware (UTC by default)
+        expected = datetime(2025, 10, 17, 14, 30, tzinfo=ZoneInfo("UTC"))
+        assert result == expected
 
     def test_invalid_date_format(self, tmp_path):
         """Test error with invalid date format."""
         filepath = tmp_path / "test.md"
 
         with pytest.raises(ParseError, match="Invalid date format"):
-            parse_date("17-10-2025", filepath)
+            parse_date("17-10-2025", filepath, timezone="UTC")
 
     def test_invalid_date_type(self, tmp_path):
         """Test error with invalid date type."""
         filepath = tmp_path / "test.md"
 
         with pytest.raises(ParseError, match="Date must be string.*datetime.*or date"):
-            parse_date(123, filepath)
+            parse_date(123, filepath, timezone="UTC")
 
 
 class TestGenerateSlug:
@@ -332,11 +348,14 @@ class TestParseContentFile:
         filepath = tmp_path / "test-post.md"
         filepath.write_text(content, encoding="utf-8")
 
-        result = parse_content_file(filepath)
+        result = parse_content_file(filepath, timezone="UTC")
 
         assert isinstance(result, ParsedContent)
         assert result.metadata.title == "My Test Post"
-        assert result.metadata.date == datetime(2025, 10, 17)
+        from zoneinfo import ZoneInfo
+
+        expected_date = datetime(2025, 10, 17, tzinfo=ZoneInfo("UTC"))
+        assert result.metadata.date == expected_date
         assert result.metadata.slug == "custom-slug"
         assert result.metadata.tags == ["python", "testing", "blog"]
         assert result.metadata.draft is False
@@ -364,10 +383,13 @@ class TestParseContentFile:
         filepath = tmp_path / "minimal.md"
         filepath.write_text(content, encoding="utf-8")
 
-        result = parse_content_file(filepath)
+        result = parse_content_file(filepath, timezone="UTC")
 
         assert result.metadata.title == "Minimal Post"
-        assert result.metadata.date == datetime(2025, 10, 17)
+        from zoneinfo import ZoneInfo
+
+        expected_date = datetime(2025, 10, 17, tzinfo=ZoneInfo("UTC"))
+        assert result.metadata.date == expected_date
         assert result.metadata.slug == "minimal-post"  # Auto-generated
         assert result.metadata.tags == []
         assert result.metadata.draft is False
@@ -391,7 +413,7 @@ class TestParseContentFile:
         filepath.write_text(content, encoding="utf-8")
 
         with pytest.raises(ParseError, match="must be a list"):
-            parse_content_file(filepath)
+            parse_content_file(filepath, timezone="UTC")
 
     def test_invalid_draft_type(self, tmp_path):
         """Test error when draft is not a boolean."""
@@ -411,7 +433,7 @@ class TestParseContentFile:
         filepath.write_text(content, encoding="utf-8")
 
         with pytest.raises(ParseError, match="must be a boolean"):
-            parse_content_file(filepath)
+            parse_content_file(filepath, timezone="UTC")
 
     def test_invalid_description_type(self, tmp_path):
         """Test error when description is not a string."""
@@ -431,14 +453,14 @@ class TestParseContentFile:
         filepath.write_text(content, encoding="utf-8")
 
         with pytest.raises(ParseError, match="must be a string"):
-            parse_content_file(filepath)
+            parse_content_file(filepath, timezone="UTC")
 
     def test_file_not_found(self, tmp_path):
         """Test error when file does not exist."""
         filepath = tmp_path / "nonexistent.md"
 
         with pytest.raises(FileNotFoundError):
-            parse_content_file(filepath)
+            parse_content_file(filepath, timezone="UTC")
 
     def test_encoding_error(self, tmp_path):
         """Test handling of encoding errors."""
@@ -450,7 +472,7 @@ class TestParseContentFile:
             )
 
         with pytest.raises(ParseError, match="File encoding error"):
-            parse_content_file(filepath)
+            parse_content_file(filepath, timezone="UTC")
 
 
 class TestParseError:

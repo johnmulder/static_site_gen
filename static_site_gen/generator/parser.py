@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
+from zoneinfo import ZoneInfo
 
 import markdown
 import yaml
@@ -145,26 +146,40 @@ def validate_front_matter(front_matter: Dict[str, Any], filepath: Path) -> None:
         )
 
 
-def parse_date(date_value: Union[str, datetime, dt.date], filepath: Path) -> datetime:
+def parse_date(
+    date_value: Union[str, datetime, dt.date], filepath: Path, timezone: str = "UTC"
+) -> datetime:
     """
-    Parse date from various formats.
+    Parse date from various formats with timezone awareness.
 
     Args:
         date_value: Date as string, datetime, or date object
         filepath: Path to file (for error reporting)
+        timezone: IANA timezone name (defaults to UTC)
 
     Returns:
-        Parsed datetime object
+        Timezone-aware datetime object
 
     Raises:
         ParseError: If date format is invalid
     """
+    try:
+        tz = ZoneInfo(timezone)
+    except Exception:
+        # Fallback to UTC if timezone is invalid
+        tz = ZoneInfo("UTC")
+
     if isinstance(date_value, datetime):
-        return date_value
+        # If already timezone-aware, return as-is; otherwise localize to specified timezone
+        if date_value.tzinfo is not None:
+            return date_value
+        else:
+            return date_value.replace(tzinfo=tz)
 
     if isinstance(date_value, dt.date):
-        # Convert date to datetime (midnight)
-        return datetime.combine(date_value, datetime.min.time())
+        # Convert date to datetime (midnight) with timezone
+        naive_dt = datetime.combine(date_value, datetime.min.time())
+        return naive_dt.replace(tzinfo=tz)
 
     if isinstance(date_value, str):
         # Try common date formats
@@ -176,7 +191,8 @@ def parse_date(date_value: Union[str, datetime, dt.date], filepath: Path) -> dat
 
         for fmt in formats:
             try:
-                return datetime.strptime(date_value.strip(), fmt)
+                naive_dt = datetime.strptime(date_value.strip(), fmt)
+                return naive_dt.replace(tzinfo=tz)
             except ValueError:
                 continue
 
@@ -303,7 +319,9 @@ def sanitize_html(html_content: str) -> str:
 
 
 def parse_content_file(
-    filepath: Path, markdown_extensions: Optional[List[str]] = None
+    filepath: Path,
+    markdown_extensions: Optional[List[str]] = None,
+    timezone: str = "UTC",
 ) -> ParsedContent:
     """
     Parse a Markdown file with YAML front matter.
@@ -311,6 +329,7 @@ def parse_content_file(
     Args:
         filepath: Path to the content file
         markdown_extensions: List of markdown extensions to use (defaults to ["extra", "codehilite", "toc"])
+        timezone: IANA timezone name for date parsing (defaults to UTC)
 
     Returns:
         ParsedContent object with metadata and content
@@ -336,8 +355,8 @@ def parse_content_file(
     # Validate required fields
     validate_front_matter(front_matter, filepath)
 
-    # Parse and validate date
-    parsed_date = parse_date(front_matter["date"], filepath)
+    # Parse and validate date with timezone awareness
+    parsed_date = parse_date(front_matter["date"], filepath, timezone)
 
     # Generate slug if not provided
     slug = front_matter.get("slug")
