@@ -25,7 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "markdown>=3.4.0",
-    "jinja2>=3.1.0", 
+    "jinja2>=3.1.0",
     "pyyaml>=6.0.0",
 ]
 
@@ -65,14 +65,16 @@ include = '\.pyi?$'
 [tool.isort]
 profile = "black"
 line_length = 88
-src_paths = ["src", "tests"]
+src_paths = ["static_site_gen", "tests"]
 
 [tool.ruff]
 target-version = "py38"
 line-length = 88
+
+[tool.ruff.lint]
 select = [
     "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings  
+    "W",  # pycodestyle warnings
     "F",  # pyflakes
     "I",  # isort
     "N",  # pep8-naming
@@ -83,7 +85,7 @@ ignore = [
 ]
 
 [tool.coverage.run]
-source = ["src"]
+source = ["static_site_gen"]
 omit = [
     "*/tests/*",
     "*/venv/*",
@@ -101,4 +103,3 @@ exclude_lines = [
     "if 0:",
     "if __name__ == .__main__.:",
 ]
-

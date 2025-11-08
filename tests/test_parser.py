@@ -6,10 +6,10 @@ covering various scenarios including edge cases and error conditions.
 """
 
 from datetime import datetime
-from pathlib import Path
 from textwrap import dedent
 
 import pytest
+
 from static_site_gen.generator.parser import (
     ContentMetadata,
     ParsedContent,
@@ -34,9 +34,9 @@ class TestExtractFrontMatter:
             date: 2025-10-17
             tags: [python, testing]
             ---
-            
+
             # Test Content
-            
+
             This is test content.
         """
         ).strip()
@@ -59,7 +59,7 @@ class TestExtractFrontMatter:
             """
             ---
             ---
-            
+
             # Content Only
         """
         ).strip()
@@ -102,7 +102,7 @@ class TestExtractFrontMatter:
             title: "Test"
             invalid_yaml: [unclosed list
             ---
-            
+
             Content
         """
         ).strip()
@@ -334,13 +334,13 @@ class TestParseContentFile:
             description: "A test post for validation"
             slug: custom-slug
             ---
-            
+
             # My Test Post
-            
+
             This is the content of my test post.
-            
+
             ## Subsection
-            
+
             More content here.
         """
         ).strip()
@@ -375,7 +375,7 @@ class TestParseContentFile:
             title: "Minimal Post"
             date: 2025-10-17
             ---
-            
+
             Just the basics.
         """
         ).strip()
@@ -404,7 +404,7 @@ class TestParseContentFile:
             date: 2025-10-17
             tags: "not a list"
             ---
-            
+
             Content
         """
         ).strip()
@@ -424,7 +424,7 @@ class TestParseContentFile:
             date: 2025-10-17
             draft: "yes"
             ---
-            
+
             Content
         """
         ).strip()
@@ -444,7 +444,7 @@ class TestParseContentFile:
             date: 2025-10-17
             description: 123
             ---
-            
+
             Content
         """
         ).strip()

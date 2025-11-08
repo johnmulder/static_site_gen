@@ -13,21 +13,22 @@
 ### Build Process Implementation
 
 1. **Configuration Loading**: Load and validate `config.yaml` for site-wide settings
-2. **Content Discovery**: Scan `content/posts/*.md` and `content/pages/*.md`
-3. **Content Processing**: For each file:
+1. **Content Discovery**: Scan `content/posts/*.md` and `content/pages/*.md`
+1. **Content Processing**: For each file:
    - Split YAML front matter and Markdown body
    - Parse and validate metadata
    - Convert Markdown to HTML
    - Generate slug if missing (kebab-case from title)
    - Render with appropriate template
    - Write to `site/.../index.html`
-4. **Index Generation**: Build homepage from sorted post list
-5. **Tag Pages**: Generate `/tag/<tag>/` pages from tag index
-6. **Static Assets**: Copy `static/` to `site/static/`
+1. **Index Generation**: Build homepage from sorted post list
+1. **Tag Pages**: Generate `/tag/<tag>/` pages from tag index
+1. **Static Assets**: Copy `static/` to `site/static/`
 
 ### Template System
 
 Uses Jinja2 with template inheritance:
+
 - `base.html` - Shared layout with header/footer
 - `post.html` - Individual blog post (extends base)
 - `page.html` - Static pages like About (extends base)
@@ -37,10 +38,12 @@ Uses Jinja2 with template inheritance:
 ### Content Model
 
 #### Front Matter Schema
+
 - **Required**: `title`, `date`
 - **Optional**: `tags` (list), `draft` (boolean), `description`, `slug`
 
 #### URL Generation
+
 - Posts: `/posts/<slug>/index.html`
 - Pages: `/<slug>/index.html`
 - Tags: `/tag/<tag>/index.html`
@@ -100,6 +103,7 @@ mdformat README.md DEVELOPMENT.md
 Current coverage: **89%** (438/490 statements)
 
 Key test areas:
+
 - Content parsing and validation
 - Template rendering
 - URL generation and file operations
@@ -136,6 +140,7 @@ static_site_gen/
 ## Configuration Options
 
 ### Required Settings
+
 ```yaml
 site_name: "My Blog"
 base_url: "https://example.com"
@@ -143,6 +148,7 @@ author: "Author Name"
 ```
 
 ### Optional Settings
+
 ```yaml
 timezone: "UTC"                    # IANA timezone name
 posts_per_page: 5                 # Posts per page for pagination
@@ -165,16 +171,19 @@ markdown_extensions:              # Additional Markdown extensions
 ## Error Handling
 
 ### Fail-Fast Scenarios
+
 - Missing or invalid `config.yaml`
 - Template directory not found
 - Invalid YAML front matter syntax
 
 ### Graceful Handling
+
 - Missing optional front matter fields (logs warning, continues)
 - Invalid dates (skips post or uses filename date)
 - Missing static files
 
 ### Error Message Format
+
 ```
 Error in content/posts/my-post.md: Missing required field 'date'
 ```
@@ -182,20 +191,20 @@ Error in content/posts/my-post.md: Missing required field 'date'
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass (`pytest`)
-6. Run code quality checks (`black .`, `ruff check .`)
-7. Commit your changes (`git commit -m 'Add amazing feature'`)
-8. Push to the branch (`git push origin feature/amazing-feature`)
-9. Open a Pull Request
+1. Create a feature branch (`git checkout -b feature/amazing-feature`)
+1. Make your changes
+1. Add tests for new functionality
+1. Ensure all tests pass (`pytest`)
+1. Run code quality checks (`black .`, `ruff check .`)
+1. Commit your changes (`git commit -m 'Add amazing feature'`)
+1. Push to the branch (`git push origin feature/amazing-feature`)
+1. Open a Pull Request
 
 ## Release Process
 
 1. Update version in `pyproject.toml`
-2. Update `CHANGELOG.md` with new features and fixes
-3. Run full test suite
-4. Create git tag (`git tag v0.2.0`)
-5. Push tag (`git push --tags`)
-6. Build and publish to PyPI (if configured)
+1. Update `CHANGELOG.md` with new features and fixes
+1. Run full test suite
+1. Create git tag (`git tag v0.2.0`)
+1. Push tag (`git push --tags`)
+1. Build and publish to PyPI (if configured)

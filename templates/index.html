@@ -19,11 +19,11 @@
         {% if pagination.has_prev %}
         <a href="{{ pagination.prev_url }}" class="pagination-link">← Previous</a>
         {% endif %}
-        
+
         <span class="pagination-info">
             Page {{ pagination.current_page }} of {{ pagination.total_pages }}
         </span>
-        
+
         {% if pagination.has_next %}
         <a href="{{ pagination.next_url }}" class="pagination-link">Next →</a>
         {% endif %}

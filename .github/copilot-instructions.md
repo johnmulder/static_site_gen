@@ -206,7 +206,7 @@ Use Jinja2 template inheritance with `base.html` providing shared layout:
 
 ```yaml
 site_name: "My Blog"
-base_url: "https://example.com" 
+base_url: "https://example.com"
 author: "Author Name"
 ```
 

@@ -17,7 +17,6 @@ from .utils import (
     collect_posts_by_tag,
     copy_static_files,
     generate_page_url,
-    generate_pagination_url,
     generate_post_url,
     generate_tag_url,
     get_output_path,
@@ -87,7 +86,7 @@ class SiteGenerator:
         if not self.config_file.exists():
             raise FileNotFoundError(f"Configuration file not found: {self.config_file}")
 
-        with open(self.config_file, "r", encoding="utf-8") as f:
+        with open(self.config_file, encoding="utf-8") as f:
             config = yaml.safe_load(f)
 
         if config is None:
@@ -160,14 +159,14 @@ class SiteGenerator:
             self.config is not None
         ), "Configuration must be loaded before processing content"
 
-        processed_content = {"posts": [], "pages": []}
+        processed_content: Dict[str, List[Any]] = {"posts": [], "pages": []}
 
         markdown_extensions = self.config.get(
             "markdown_extensions", ["extra", "codehilite", "toc"]
         )
         timezone = self.config.get("timezone", "UTC")
 
-        post_slugs = set()
+        post_slugs: set[str] = set()
         for post_file in content_files["posts"]:
             try:
                 post_data = parse_content_file(post_file, markdown_extensions, timezone)
@@ -190,7 +189,7 @@ class SiteGenerator:
                 print(f"Error processing post {post_file}: {e}")
                 continue
 
-        page_slugs = set()
+        page_slugs: set[str] = set()
         for page_file in content_files["pages"]:
             try:
                 page_data = parse_content_file(page_file, markdown_extensions, timezone)

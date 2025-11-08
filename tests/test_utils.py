@@ -5,11 +5,10 @@ These tests cover file operations, URL generation, and data manipulation
 functions used throughout the site generation process.
 """
 
-import shutil
 from datetime import datetime
-from pathlib import Path
 
 import pytest
+
 from static_site_gen.generator.utils import (
     clean_output_dir,
     collect_posts_by_tag,

@@ -1,9 +1,6 @@
----
-title: "Python Testing Best Practices"
-date: 2025-10-16
-tags: [python, testing, best-practices]
-description: "A comprehensive guide to testing in Python"
----
+______________________________________________________________________
+
+## title: "Python Testing Best Practices" date: 2025-10-16 tags: \[python, testing, best-practices\] description: "A comprehensive guide to testing in Python"
 
 # Python Testing Best Practices
 

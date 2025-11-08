@@ -5,10 +5,9 @@ These tests target specific uncovered functionality in template rendering,
 error handling, and edge cases.
 """
 
-from pathlib import Path
-
 import pytest
 from jinja2 import TemplateNotFound, TemplateSyntaxError
+
 from static_site_gen.generator.renderer import TemplateRenderer
 
 

@@ -5,12 +5,11 @@ These tests target specific uncovered areas in the build process,
 configuration loading, and error handling scenarios.
 """
 
-from datetime import datetime
-from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 import yaml
+
 from static_site_gen.generator.core import SiteGenerator
 
 

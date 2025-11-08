@@ -5,15 +5,14 @@ These tests ensure that the specific bugs discovered during bug hunting
 do not reoccur in future versions.
 """
 
-import tempfile
 from datetime import date, datetime
-from pathlib import Path
-from zoneinfo import ZoneInfo
 
 import pytest
 import yaml
+from zoneinfo import ZoneInfo
+
 from static_site_gen.generator.core import SiteGenerator
-from static_site_gen.generator.parser import ParseError, parse_content_file, parse_date
+from static_site_gen.generator.parser import parse_content_file, parse_date
 
 
 class TestBugFix1ConfigValidation:

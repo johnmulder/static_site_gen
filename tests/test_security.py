@@ -5,9 +5,8 @@ These tests verify that the system properly prevents path traversal attacks
 and other security vulnerabilities while allowing legitimate operations.
 """
 
-from pathlib import Path
-
 import pytest
+
 from static_site_gen.generator.utils import get_output_path
 
 

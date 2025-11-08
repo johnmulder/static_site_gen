@@ -5,13 +5,13 @@ These tests cover all CLI functionality including build command,
 initialization, error handling, and argument parsing.
 """
 
-import sys
 import tempfile
 from io import StringIO
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+
 from static_site_gen.cli import cmd_build, cmd_init, main
 
 
@@ -20,11 +20,9 @@ class TestCLI:
 
     def test_main_with_help_flag(self):
         """Test main function with help flag."""
-        with (
-            patch("sys.argv", ["cli.py", "--help"]),
-            patch("sys.stdout", new_callable=StringIO) as mock_stdout,
-            pytest.raises(SystemExit) as exc_info,
-        ):
+        with patch("sys.argv", ["cli.py", "--help"]), patch(
+            "sys.stdout", new_callable=StringIO
+        ) as mock_stdout, pytest.raises(SystemExit) as exc_info:
             main()
 
         assert exc_info.value.code == 0
@@ -39,7 +37,7 @@ class TestCLI:
             (temp_path / "config.yaml").write_text(
                 """
 site_name: "Test Site"
-base_url: "https://example.com" 
+base_url: "https://example.com"
 author: "Test Author"
 """
             )
@@ -64,9 +62,8 @@ author: "Test Author"
 """
             )
 
-            with (
-                patch("sys.argv", ["cli.py", "build"]),
-                patch("os.getcwd", return_value=str(temp_path)),
+            with patch("sys.argv", ["cli.py", "build"]), patch(
+                "os.getcwd", return_value=str(temp_path)
             ):
                 exit_code = main()
 
@@ -81,11 +78,9 @@ author: "Test Author"
 
     def test_main_with_unknown_command(self):
         """Test main function with unknown command."""
-        with (
-            patch("sys.argv", ["cli.py", "unknown"]),
-            patch("sys.stderr", new_callable=StringIO) as mock_stderr,
-            pytest.raises(SystemExit) as exc_info,
-        ):
+        with patch("sys.argv", ["cli.py", "unknown"]), patch(
+            "sys.stderr", new_callable=StringIO
+        ) as mock_stderr, pytest.raises(SystemExit) as exc_info:
             main()
 
         assert exc_info.value.code == 2
@@ -183,16 +178,14 @@ author: "Test Author"
             exit_code = cmd_build(args)
             assert exit_code == 1
 
-    def test_cmd_init_success(self):
+    def test_init_command_not_implemented(self):
         """Test init command (currently not implemented)."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
+        args = Mock()
+        args.command = "init"
 
-            args = Mock()
-            args.project_name = "test-project"
-
-            exit_code = cmd_init(args)
-            assert exit_code == 1
+        # The cmd_init function just prints a message and returns 1
+        exit_code = cmd_init(args)
+        assert exit_code == 1
 
     def test_cmd_init_not_implemented(self):
         """Test that init command is not yet implemented."""

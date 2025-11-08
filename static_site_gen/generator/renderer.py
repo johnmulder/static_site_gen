@@ -8,7 +8,7 @@ Provides clean separation between content and presentation layers.
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from jinja2 import Environment, FileSystemLoader, Template, TemplateNotFound
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 
 class TemplateRenderer:
