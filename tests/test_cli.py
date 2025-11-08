@@ -20,11 +20,9 @@ class TestCLI:
 
     def test_main_with_help_flag(self):
         """Test main function with help flag."""
-        with (
-            patch("sys.argv", ["cli.py", "--help"]),
-            patch("sys.stdout", new_callable=StringIO) as mock_stdout,
-            pytest.raises(SystemExit) as exc_info,
-        ):
+        with patch("sys.argv", ["cli.py", "--help"]), patch(
+            "sys.stdout", new_callable=StringIO
+        ) as mock_stdout, pytest.raises(SystemExit) as exc_info:
             main()
 
         assert exc_info.value.code == 0
@@ -64,9 +62,8 @@ author: "Test Author"
 """
             )
 
-            with (
-                patch("sys.argv", ["cli.py", "build"]),
-                patch("os.getcwd", return_value=str(temp_path)),
+            with patch("sys.argv", ["cli.py", "build"]), patch(
+                "os.getcwd", return_value=str(temp_path)
             ):
                 exit_code = main()
 
@@ -81,11 +78,9 @@ author: "Test Author"
 
     def test_main_with_unknown_command(self):
         """Test main function with unknown command."""
-        with (
-            patch("sys.argv", ["cli.py", "unknown"]),
-            patch("sys.stderr", new_callable=StringIO) as mock_stderr,
-            pytest.raises(SystemExit) as exc_info,
-        ):
+        with patch("sys.argv", ["cli.py", "unknown"]), patch(
+            "sys.stderr", new_callable=StringIO
+        ) as mock_stderr, pytest.raises(SystemExit) as exc_info:
             main()
 
         assert exc_info.value.code == 2
