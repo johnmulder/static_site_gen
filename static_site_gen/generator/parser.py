@@ -6,16 +6,17 @@ and preparing content for rendering with HTML sanitization.
 """
 
 import datetime as dt
+import hashlib
 import re
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
+from zoneinfo import ZoneInfo
 
 import markdown
 import yaml
-from zoneinfo import ZoneInfo
 
 
 class ParseError(Exception):
@@ -24,8 +25,8 @@ class ParseError(Exception):
     def __init__(
         self,
         message: str,
-        filepath: Optional[Path] = None,
-        line_number: Optional[int] = None,
+        filepath: Path | None = None,
+        line_number: int | None = None,
     ):
         self.filepath = filepath
         self.line_number = line_number
@@ -46,11 +47,11 @@ class ContentMetadata:
     title: str
     date: datetime
     slug: str
-    tags: Optional[List[str]] = None
+    tags: list[str] | None = None
     draft: bool = False
-    description: Optional[str] = None
+    description: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Normalize data after initialization."""
         if self.tags is None:
             self.tags = []
@@ -68,7 +69,7 @@ class ParsedContent:
     filepath: Path
 
 
-def extract_front_matter(content: str, filepath: Path) -> tuple[Dict[str, Any], str]:
+def extract_front_matter(content: str, filepath: Path) -> tuple[dict[str, Any], str]:
     """
     Extract YAML front matter from content string.
 
@@ -119,7 +120,7 @@ def extract_front_matter(content: str, filepath: Path) -> tuple[Dict[str, Any], 
         raise ParseError(f"Failed to parse front matter: {e}", filepath) from e
 
 
-def validate_front_matter(front_matter: Dict[str, Any], filepath: Path) -> None:
+def validate_front_matter(front_matter: dict[str, Any], filepath: Path) -> None:
     """
     Validate required fields in front matter.
 
@@ -140,14 +141,14 @@ def validate_front_matter(front_matter: Dict[str, Any], filepath: Path) -> None:
 
     # Validate date format
     date_value = front_matter["date"]
-    if not isinstance(date_value, (str, datetime, dt.date)):
+    if not isinstance(date_value, str | datetime | dt.date):
         raise ParseError(
             "Field 'date' must be a string (YYYY-MM-DD) or datetime", filepath
         )
 
 
 def parse_date(
-    date_value: Union[str, datetime, dt.date], filepath: Path, timezone: str = "UTC"
+    date_value: str | datetime | dt.date, filepath: Path, timezone: str = "UTC"
 ) -> datetime:
     """
     Parse date from various formats with timezone awareness.
@@ -242,10 +243,9 @@ def generate_slug(title: str) -> str:
     if unicode_slug and len(unicode_slug) >= 1:
         return unicode_slug
 
-    # Final fallback: generate meaningful slug from title length and first chars
-    # This ensures unique fallbacks for different Unicode-only titles
-    title_hash = abs(hash(title)) % 10000
-    return f"post-{title_hash}"
+    # Final fallback: deterministic hash-based slug to avoid collisions.
+    slug_hash = hashlib.sha1(title.encode("utf-8")).hexdigest()[:8]
+    return f"post-{slug_hash}"
 
 
 def sanitize_html(html_content: str) -> str:
@@ -253,14 +253,18 @@ def sanitize_html(html_content: str) -> str:
     Sanitize HTML content to remove potentially dangerous elements.
     This is a basic implementation for security.
     """
-    # For now, just return the content as-is since markdown generates safe HTML
-    # In a production environment, you might want to use bleach or similar
-    return html_content
+    sanitized = re.sub(
+        r"<script\b[^<]*(?:(?!</script>)<[^<]*)*</script>",
+        "",
+        html_content,
+        flags=re.IGNORECASE,
+    )
+    return sanitized
 
 
 def parse_content_file(
     filepath: Path,
-    markdown_extensions: Optional[List[str]] = None,
+    markdown_extensions: list[str] | None = None,
     timezone: str = "UTC",
 ) -> ParsedContent:
     """

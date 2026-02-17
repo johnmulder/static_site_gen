@@ -6,12 +6,14 @@ This module provides the CLI commands for building and managing static sites.
 
 import argparse
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import cast
 
 from .generator.core import SiteGenerator
 
 
-def cmd_build(args):
+def cmd_build(args: argparse.Namespace) -> int:
     """
     Execute site build command.
 
@@ -35,7 +37,7 @@ def cmd_build(args):
         return 1
 
 
-def cmd_init(args):
+def cmd_init(args: argparse.Namespace) -> int:
     """
     Initialize new site project (future feature).
 
@@ -46,7 +48,7 @@ def cmd_init(args):
     return 1
 
 
-def create_parser():
+def create_parser() -> argparse.ArgumentParser:
     """
     Create command-line argument parser.
 
@@ -76,7 +78,7 @@ def create_parser():
     return parser
 
 
-def main():
+def main() -> int:
     """
     Main CLI entry point.
 
@@ -89,13 +91,14 @@ def main():
         parser.print_help()
         return 1
 
-    args = parser.parse_args()
+    args: argparse.Namespace = parser.parse_args()
 
     if not hasattr(args, "func"):
         parser.print_help()
         return 1
 
-    return args.func(args)
+    command_func = cast(Callable[[argparse.Namespace], int], getattr(args, "func"))
+    return command_func(args)
 
 
 if __name__ == "__main__":

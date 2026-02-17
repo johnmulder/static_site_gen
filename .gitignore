@@ -31,3 +31,7 @@ htmlcov/
 
 # Type checking
 .mypy_cache/
+
+# intermediate developpment files
+PLAN.md
+.github/workflows

@@ -6,7 +6,7 @@ Provides clean separation between content and presentation layers.
 """
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
@@ -41,7 +41,7 @@ class TemplateRenderer:
             lstrip_blocks=True,
         )
 
-    def render_template(self, template_name: str, context: Dict[str, Any]) -> str:
+    def render_template(self, template_name: str, context: dict[str, Any]) -> str:
         """
         Render template with given context data.
 
@@ -64,7 +64,7 @@ class TemplateRenderer:
             ) from e
 
     def render_post(
-        self, post_data: Dict[str, Any], site_config: Dict[str, Any]
+        self, post_data: dict[str, Any], site_config: dict[str, Any]
     ) -> str:
         """
         Render individual blog post using post.html template.
@@ -83,7 +83,7 @@ class TemplateRenderer:
         }
         return self.render_template("post.html", context)
 
-    def render_index(self, posts: list, site_config: Dict[str, Any]) -> str:
+    def render_index(self, posts: list, site_config: dict[str, Any]) -> str:
         """
         Render homepage with list of posts using index.html template.
 
@@ -102,7 +102,7 @@ class TemplateRenderer:
         return self.render_template("index.html", context)
 
     def render_index_page(
-        self, posts: list, site_config: Dict[str, Any], pagination: Dict[str, Any]
+        self, posts: list, site_config: dict[str, Any], pagination: dict[str, Any]
     ) -> str:
         """
         Render paginated index page using index.html template.
@@ -128,7 +128,7 @@ class TemplateRenderer:
         return self.render_template("index.html", context)
 
     def render_tag_page(
-        self, tag: str, posts: list, site_config: Dict[str, Any]
+        self, tag: str, posts: list, site_config: dict[str, Any]
     ) -> str:
         """
         Render tag archive page using tag.html template.
@@ -151,9 +151,9 @@ class TemplateRenderer:
 
     def render_page(
         self,
-        page_data: Dict[str, Any],
-        site_config: Dict[str, Any],
-        template_name: Optional[str] = None,
+        page_data: dict[str, Any],
+        site_config: dict[str, Any],
+        template_name: str | None = None,
     ) -> str:
         """
         Render static page with optional custom template.

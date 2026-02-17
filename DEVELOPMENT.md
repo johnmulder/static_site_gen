@@ -53,7 +53,7 @@ Uses Jinja2 with template inheritance:
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.12+
 - Virtual environment recommended
 
 ### Installation
@@ -88,19 +88,42 @@ pytest tests/test_parser.py
 
 ```bash
 # Format code
-black .
-isort .
+black --check .
+isort --check-only .
 
 # Lint code
 ruff check .
+
+# Type checking
+mypy static_site_gen
 
 # Format Markdown
 mdformat README.md DEVELOPMENT.md
 ```
 
+### Post-Implementation Checklist
+
+Run this sequence before opening or updating a pull request:
+
+```bash
+# 1) Tests
+pytest
+
+# 2) Quality checks
+ruff check .
+black --check .
+isort --check-only .
+mypy static_site_gen
+
+# 3) Pre-commit hooks
+pre-commit run --all-files
+```
+
+Expected result: all commands pass with no file changes required.
+
 ### Testing Coverage
 
-Current coverage: **89%** (438/490 statements)
+Coverage is enforced in CI and should not regress.
 
 Key test areas:
 
@@ -195,7 +218,7 @@ Error in content/posts/my-post.md: Missing required field 'date'
 1. Make your changes
 1. Add tests for new functionality
 1. Ensure all tests pass (`pytest`)
-1. Run code quality checks (`black .`, `ruff check .`)
+1. Run code quality checks (`black --check .`, `ruff check .`, `isort --check-only .`, `mypy static_site_gen`)
 1. Commit your changes (`git commit -m 'Add amazing feature'`)
 1. Push to the branch (`git push origin feature/amazing-feature`)
 1. Open a Pull Request

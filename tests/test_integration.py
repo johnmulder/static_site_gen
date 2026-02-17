@@ -115,8 +115,3 @@ This is a test page.
         # Check static assets
         static_file = site_dir / "static" / "test.css"
         assert static_file.exists()
-
-
-if __name__ == "__main__":
-    test_complete_build_pipeline()
-    print("All tests passed!")

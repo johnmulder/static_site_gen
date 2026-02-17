@@ -6,10 +6,10 @@ do not reoccur in future versions.
 """
 
 from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 import pytest
 import yaml
-from zoneinfo import ZoneInfo
 
 from static_site_gen.generator.core import SiteGenerator
 from static_site_gen.generator.parser import parse_content_file, parse_date

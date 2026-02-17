@@ -25,10 +25,10 @@ python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install dependencies
-pip install -r requirements.txt
-
-# Install the package
 pip install -e .
+
+# Optional: install development tools
+pip install -e .[dev]
 ```
 
 ### Create Your First Post
@@ -223,7 +223,17 @@ your-blog/
 
 ## Requirements
 
-- Python 3.8 or higher
+- Python 3.12 or higher
 - Dependencies: `markdown`, `jinja2`, `pyyaml`
+
+## Development Quality Checks
+
+```bash
+ruff check .
+black --check .
+isort --check-only .
+mypy static_site_gen
+pytest --cov=static_site_gen --cov-report=term-missing
+```
 
 For detailed development information, see [DEVELOPMENT.md](DEVELOPMENT.md).

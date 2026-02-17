@@ -219,3 +219,34 @@ site_name: "Test Site"
 
         # This would need the SiteGenerator to validate required fields
         # Currently it may not do this validation
+
+    def test_config_rejects_invalid_base_url(self, tmp_path):
+        """Test configuration rejects non-http(s) URLs."""
+        (tmp_path / "config.yaml").write_text(
+            """
+site_name: "Test Site"
+base_url: "not-a-url"
+author: "Test Author"
+"""
+        )
+
+        generator = SiteGenerator(tmp_path)
+        with pytest.raises(
+            ValueError, match="base_url must be a valid absolute HTTP/HTTPS URL"
+        ):
+            generator.load_config()
+
+    def test_config_rejects_invalid_timezone(self, tmp_path):
+        """Test configuration rejects invalid timezone names."""
+        (tmp_path / "config.yaml").write_text(
+            """
+site_name: "Test Site"
+base_url: "https://example.com"
+author: "Test Author"
+timezone: "Mars/Phobos"
+"""
+        )
+
+        generator = SiteGenerator(tmp_path)
+        with pytest.raises(ValueError, match="Invalid timezone setting"):
+            generator.load_config()

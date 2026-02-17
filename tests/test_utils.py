@@ -16,8 +16,10 @@ from static_site_gen.generator.utils import (
     ensure_dir,
     filter_published_posts,
     generate_page_url,
+    generate_pagination_url,
     generate_post_url,
     generate_tag_url,
+    paginate_posts,
     sort_posts_by_date,
     write_file,
 )
@@ -214,3 +216,25 @@ class TestUtilityFunctions:
         assert output_dir.exists()
         assert output_dir.is_dir()
         assert len(list(output_dir.iterdir())) == 0
+
+    def test_paginate_posts_splits_into_expected_pages(self):
+        """Test pagination splits post lists correctly."""
+        posts = [
+            {"title": f"Post {i}", "date": datetime(2025, 1, i)} for i in range(1, 8)
+        ]
+
+        pages = paginate_posts(posts, posts_per_page=3)
+
+        assert len(pages) == 3
+        assert pages[0]["page_number"] == 1
+        assert len(pages[0]["posts"]) == 3
+        assert pages[0]["has_next"] is True
+        assert pages[0]["next_url"] == "/page/2/"
+        assert pages[2]["page_number"] == 3
+        assert len(pages[2]["posts"]) == 1
+        assert pages[2]["has_next"] is False
+
+    def test_generate_pagination_url(self):
+        """Test URL generation for pagination pages."""
+        assert generate_pagination_url(1) == "/"
+        assert generate_pagination_url(2) == "/page/2/"

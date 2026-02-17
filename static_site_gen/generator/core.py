@@ -6,11 +6,13 @@ the entire content -> template -> output pipeline.
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, cast
+from urllib.parse import urlparse
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
 
-from .parser import parse_content_file
+from .parser import ParseError, parse_content_file
 from .renderer import TemplateRenderer
 from .utils import (
     clean_output_dir,
@@ -48,8 +50,8 @@ class SiteGenerator:
         self.static_dir = project_root / "static"
         self.output_dir = project_root / "site"
 
-        self.config: Optional[Dict[str, Any]] = None
-        self.renderer: Optional[TemplateRenderer] = None
+        self.config: dict[str, Any] | None = None
+        self.renderer: TemplateRenderer | None = None
 
     def _resolve_slug_collision(self, slug: str, existing_slugs: set) -> str:
         """
@@ -72,7 +74,7 @@ class SiteGenerator:
                 return candidate
             counter += 1
 
-    def load_config(self) -> Dict[str, Any]:
+    def load_config(self) -> dict[str, Any]:
         """
         Load and validate site configuration.
 
@@ -125,10 +127,23 @@ class SiteGenerator:
                 f"posts_per_page must be a positive integer, got: {posts_per_page}"
             )
 
-        self.config = config
-        return config
+        parsed_url = urlparse(config["base_url"])
+        if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+            raise ValueError(
+                f"base_url must be a valid absolute HTTP/HTTPS URL, got: {config['base_url']}"
+            )
 
-    def discover_content(self) -> Dict[str, List[Path]]:
+        timezone = config.get("timezone", "UTC")
+        try:
+            ZoneInfo(timezone)
+        except ZoneInfoNotFoundError as exc:
+            raise ValueError(f"Invalid timezone setting: {timezone}") from exc
+
+        validated_config = cast(dict[str, Any], config)
+        self.config = validated_config
+        return validated_config
+
+    def discover_content(self) -> dict[str, list[Path]]:
         """
         Discover all content files in content directory.
 
@@ -145,7 +160,7 @@ class SiteGenerator:
 
         return content_files
 
-    def process_content(self, content_files: Dict[str, List[Path]]) -> Dict[str, List]:
+    def process_content(self, content_files: dict[str, list[Path]]) -> dict[str, list]:
         """
         Parse and process all content files.
 
@@ -159,7 +174,7 @@ class SiteGenerator:
             self.config is not None
         ), "Configuration must be loaded before processing content"
 
-        processed_content: Dict[str, List[Any]] = {"posts": [], "pages": []}
+        processed_content: dict[str, list[Any]] = {"posts": [], "pages": []}
 
         markdown_extensions = self.config.get(
             "markdown_extensions", ["extra", "codehilite", "toc"]
@@ -185,7 +200,7 @@ class SiteGenerator:
 
                 post_slugs.add(final_slug)
                 processed_content["posts"].append(post_data)
-            except Exception as e:
+            except (ParseError, OSError, ValueError) as e:
                 print(f"Error processing post {post_file}: {e}")
                 continue
 
@@ -208,13 +223,13 @@ class SiteGenerator:
 
                 page_slugs.add(final_slug)
                 processed_content["pages"].append(page_data)
-            except Exception as e:
+            except (ParseError, OSError, ValueError) as e:
                 print(f"Error processing page {page_file}: {e}")
                 continue
 
         return processed_content
 
-    def generate_posts(self, posts: List[Any]) -> None:
+    def generate_posts(self, posts: list[Any]) -> None:
         """
         Generate individual post pages.
 
@@ -244,13 +259,13 @@ class SiteGenerator:
                 url_path = generate_post_url(post.metadata.slug)
                 output_path = get_output_path(self.output_dir, url_path)
                 write_file(output_path, html_content)
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 print(
                     f"Error generating post '{post.metadata.title}' ({post.metadata.slug}): {e}"
                 )
                 continue
 
-    def generate_index(self, posts: List) -> None:
+    def generate_index(self, posts: list) -> None:
         """
         Generate homepage with chronologically sorted posts, including pagination.
 
@@ -308,11 +323,11 @@ class SiteGenerator:
                 )
                 write_file(output_path, html_content)
 
-        except Exception as e:
+        except (OSError, ValueError) as e:
             print(f"Error generating index pages: {e}")
             raise
 
-    def generate_tag_pages(self, posts: List[Any]) -> None:
+    def generate_tag_pages(self, posts: list[Any]) -> None:
         """
         Generate tag archive pages.
 
@@ -354,11 +369,11 @@ class SiteGenerator:
                 output_path = get_output_path(self.output_dir, url_path)
 
                 write_file(output_path, html_content)
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 print(f"Error generating tag page for '{tag}': {e}")
                 continue
 
-    def generate_pages(self, pages: List[Any]) -> None:
+    def generate_pages(self, pages: list[Any]) -> None:
         """
         Generate static pages.
 
@@ -390,7 +405,7 @@ class SiteGenerator:
                 output_path = get_output_path(self.output_dir, url_path)
 
                 write_file(output_path, html_content)
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 print(
                     f"Error generating page '{page.metadata.title}' ({page.metadata.slug}): {e}"
                 )

@@ -9,7 +9,7 @@ import shutil
 import urllib.parse
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 
 def ensure_dir(path: Path) -> None:
@@ -96,36 +96,38 @@ def get_output_path(base_dir: Path, url_path: str) -> Path:
     Raises:
         ValueError: If url_path contains path traversal attempts or invalid characters
     """
-    import urllib.parse
-
     decoded_path = urllib.parse.unquote(url_path)
 
     if ".." in url_path or ".." in decoded_path:
         raise ValueError(f"Path traversal attempt detected in URL path: {url_path}")
 
-    relative_path = url_path.strip("/")
-
-    if "\\" in relative_path:
+    if "\\" in url_path or "\\" in decoded_path:
         raise ValueError(f"Invalid path separator in URL path: {url_path}")
+
+    relative_path = decoded_path.strip("/")
+
+    parts = [part for part in relative_path.split("/") if part]
+    if any(part in {".", ".."} for part in parts):
+        raise ValueError(f"Path traversal attempt detected in URL path: {url_path}")
+
+    for part in parts:
+        if part != part.strip():
+            raise ValueError(f"Invalid path segment in URL path: {url_path}")
 
     if not relative_path:
         return base_dir / "index.html"
-    else:
-        output_path = base_dir / relative_path / "index.html"
 
-        try:
-            resolved_base = base_dir.resolve()
-            resolved_output = output_path.resolve()
+    output_path = base_dir.joinpath(*parts) / "index.html"
 
-            if not str(resolved_output).startswith(str(resolved_base)):
-                raise ValueError(
-                    f"Path traversal attempt: {url_path} would write outside base directory"
-                )
+    try:
+        resolved_base = base_dir.resolve()
+        resolved_output = output_path.resolve()
 
-        except (OSError, ValueError):
-            raise ValueError(f"Invalid or dangerous path: {url_path}")
+        resolved_output.relative_to(resolved_base)
+    except (OSError, ValueError):
+        raise ValueError(f"Invalid or dangerous path: {url_path}")
 
-        return output_path
+    return output_path
 
 
 def write_file(path: Path, content: str) -> None:
@@ -141,8 +143,8 @@ def write_file(path: Path, content: str) -> None:
 
 
 def collect_posts_by_tag(
-    posts: List[Dict[str, Any]],
-) -> Dict[str, List[Dict[str, Any]]]:
+    posts: list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
     """
     Group posts by their tags.
 
@@ -163,8 +165,8 @@ def collect_posts_by_tag(
 
 
 def sort_posts_by_date(
-    posts: List[Dict[str, Any]], reverse: bool = True
-) -> List[Dict[str, Any]]:
+    posts: list[dict[str, Any]], reverse: bool = True
+) -> list[dict[str, Any]]:
     """
     Sort posts by their publication date.
 
@@ -178,7 +180,7 @@ def sort_posts_by_date(
     return sorted(posts, key=lambda p: p["date"], reverse=reverse)
 
 
-def filter_published_posts(posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def filter_published_posts(posts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     Filter out draft posts.
 
@@ -222,8 +224,8 @@ def clean_output_dir(output_dir: Path) -> None:
 
 
 def paginate_posts(
-    posts: List[Dict[str, Any]], posts_per_page: int
-) -> List[Dict[str, Any]]:
+    posts: list[dict[str, Any]], posts_per_page: int
+) -> list[dict[str, Any]]:
     """
     Split posts into pages for pagination.
 
