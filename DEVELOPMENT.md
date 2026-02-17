@@ -136,7 +136,7 @@ Key test areas:
 
 ## Project Structure
 
-```
+```ascii
 static_site_gen/
 ├── static_site_gen/              # Main package
 │   ├── __init__.py
@@ -207,7 +207,7 @@ markdown_extensions:              # Additional Markdown extensions
 
 ### Error Message Format
 
-```
+```text
 Error in content/posts/my-post.md: Missing required field 'date'
 ```
 

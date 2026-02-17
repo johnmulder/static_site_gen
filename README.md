@@ -55,7 +55,7 @@ This is my first post using the static site generator!
 - Fast loading pages
 ```
 
-2. **Configure your site** in `config.yaml`:
+1. **Configure your site** in `config.yaml`:
 
 ```yaml
 site_name: "My Blog"
@@ -64,13 +64,13 @@ author: "Your Name"
 description: "My personal blog"
 ```
 
-3. **Build your site**:
+1. **Build your site**:
 
 ```bash
 python -m static_site_gen build
 ```
 
-4. **Preview locally**:
+1. **Preview locally**:
 
 ```bash
 python -m http.server -d site
@@ -203,7 +203,7 @@ After building your site with `python -m static_site_gen build`, you can deploy 
 
 ## Project Structure
 
-```
+```ascii
 your-blog/
 ├── content/                  # Your content
 │   ├── posts/               # Blog posts (YYYY-MM-DD-slug.md)
