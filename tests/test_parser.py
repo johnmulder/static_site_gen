@@ -5,8 +5,10 @@ These tests validate the parsing of Markdown files with YAML front matter,
 covering various scenarios including edge cases and error conditions.
 """
 
+import datetime as dt
 from datetime import datetime
 from textwrap import dedent
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -46,8 +48,6 @@ class TestExtractFrontMatter:
 
         assert front_matter["title"] == "Test Post"
         # YAML automatically converts date strings to date objects
-        import datetime as dt
-
         assert front_matter["date"] == dt.date(2025, 10, 17)
         assert front_matter["tags"] == ["python", "testing"]
         assert "# Test Content" in body
@@ -170,8 +170,6 @@ class TestParseDate:
 
     def test_datetime_object(self, tmp_path):
         """Test parsing when date is already a datetime object."""
-        from zoneinfo import ZoneInfo
-
         date_obj = datetime(2025, 10, 17)
         filepath = tmp_path / "test.md"
 
@@ -182,8 +180,6 @@ class TestParseDate:
 
     def test_date_string_basic(self, tmp_path):
         """Test parsing basic date string."""
-        from zoneinfo import ZoneInfo
-
         filepath = tmp_path / "test.md"
 
         result = parse_date("2025-10-17", filepath, timezone="UTC")
@@ -193,8 +189,6 @@ class TestParseDate:
 
     def test_date_string_with_time(self, tmp_path):
         """Test parsing date string with time."""
-        from zoneinfo import ZoneInfo
-
         filepath = tmp_path / "test.md"
 
         result = parse_date("2025-10-17 14:30:00", filepath, timezone="UTC")
@@ -204,8 +198,6 @@ class TestParseDate:
 
     def test_date_string_with_time_no_seconds(self, tmp_path):
         """Test parsing date string with time (no seconds)."""
-        from zoneinfo import ZoneInfo
-
         filepath = tmp_path / "test.md"
 
         result = parse_date("2025-10-17 14:30", filepath, timezone="UTC")
@@ -352,8 +344,6 @@ class TestParseContentFile:
 
         assert isinstance(result, ParsedContent)
         assert result.metadata.title == "My Test Post"
-        from zoneinfo import ZoneInfo
-
         expected_date = datetime(2025, 10, 17, tzinfo=ZoneInfo("UTC"))
         assert result.metadata.date == expected_date
         assert result.metadata.slug == "custom-slug"
@@ -386,8 +376,6 @@ class TestParseContentFile:
         result = parse_content_file(filepath, timezone="UTC")
 
         assert result.metadata.title == "Minimal Post"
-        from zoneinfo import ZoneInfo
-
         expected_date = datetime(2025, 10, 17, tzinfo=ZoneInfo("UTC"))
         assert result.metadata.date == expected_date
         assert result.metadata.slug == "minimal-post"  # Auto-generated

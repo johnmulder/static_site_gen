@@ -191,7 +191,7 @@ This is published.
         # Should handle empty tag collection gracefully
         generator.generate_tag_pages(posts)
 
-        # This test verifies the method doesn't crash with empty tags    def test_resolve_slug_collision_with_many_conflicts(self, tmp_path):
+    def test_resolve_slug_collision_with_many_conflicts(self, tmp_path):
         """Test slug collision resolution with multiple conflicts."""
         generator = self._create_project_structure(tmp_path)
 
@@ -313,8 +313,8 @@ class TestDiscoverContent:
 
         result = generator.discover_content()
 
-        assert result["posts"] == []
-        assert result["pages"] == []
+        assert not result["posts"]
+        assert not result["pages"]
 
     def test_missing_content_directories(self, tmp_path):
         """Test discovery when content subdirectories do not exist."""
@@ -323,5 +323,5 @@ class TestDiscoverContent:
 
         result = generator.discover_content()
 
-        assert result["posts"] == []
-        assert result["pages"] == []
+        assert not result["posts"]
+        assert not result["pages"]

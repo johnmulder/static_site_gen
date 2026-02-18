@@ -27,7 +27,7 @@ class TestBugFix1ConfigValidation:
             "author": "Test Author",
         }
 
-        with open(config_path, "w") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(config_data, f)
 
         generator = SiteGenerator(tmp_path)
@@ -43,7 +43,7 @@ class TestBugFix1ConfigValidation:
             "author": "Test Author",
         }
 
-        with open(config_path, "w") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(config_data, f)
 
         generator = SiteGenerator(tmp_path)
@@ -59,7 +59,7 @@ class TestBugFix1ConfigValidation:
             "author": "Test Author",
         }
 
-        with open(config_path, "w") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(config_data, f)
 
         generator = SiteGenerator(tmp_path)
@@ -75,7 +75,7 @@ class TestBugFix1ConfigValidation:
             "author": "Test Author",
         }
 
-        with open(config_path, "w") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(config_data, f)
 
         generator = SiteGenerator(tmp_path)
@@ -91,7 +91,7 @@ class TestBugFix1ConfigValidation:
             "author": "Test Author",
         }
 
-        with open(config_path, "w") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(config_data, f)
 
         generator = SiteGenerator(tmp_path)
@@ -107,7 +107,7 @@ class TestBugFix1ConfigValidation:
             "author": None,  # Should be rejected
         }
 
-        with open(config_path, "w") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(config_data, f)
 
         generator = SiteGenerator(tmp_path)
@@ -132,7 +132,7 @@ class TestBugFix1ConfigValidation:
             "author": "Valid Author",
         }
 
-        with open(config_path, "w") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(config_data, f)
 
         generator = SiteGenerator(tmp_path)
@@ -234,7 +234,7 @@ class TestBugFix3SlugCollisionDataPreservation:
             "base_url": "https://example.com",
             "author": "Test Author",
         }
-        with open(config_path, "w") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(config_data, f)
 
         # Create content with identical slugs and custom fields
@@ -285,13 +285,17 @@ Content 2
         )
 
         (templates_dir / "index.html").write_text(
-            """{% extends "base.html" %}
-{% block content %}<h1>Blog</h1>{% for post in posts %}<p>{{ post.title }}</p>{% endfor %}{% endblock %}"""
+            '{% extends "base.html" %}'
+            "{% block content %}<h1>Blog</h1>"
+            "{% for post in posts %}<p>{{ post.title }}</p>{% endfor %}"
+            "{% endblock %}"
         )
 
         (templates_dir / "tag.html").write_text(
-            """{% extends "base.html" %}
-{% block content %}<h1>Tag: {{ tag }}</h1>{% for post in posts %}<p>{{ post.title }}</p>{% endfor %}{% endblock %}"""
+            '{% extends "base.html" %}'
+            "{% block content %}<h1>Tag: {{ tag }}</h1>"
+            "{% for post in posts %}<p>{{ post.title }}</p>{% endfor %}"
+            "{% endblock %}"
         )
 
         (templates_dir / "page.html").write_text(
@@ -335,7 +339,7 @@ Content 2
             "base_url": "https://example.com",
             "author": "Test Author",
         }
-        with open(config_path, "w") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(config_data, f)
 
         # Create content with different slugs

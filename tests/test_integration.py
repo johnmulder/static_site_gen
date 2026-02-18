@@ -39,7 +39,13 @@ class TestCompleteBuildPipeline:
         _write_post(
             posts_dir,
             "2025-10-17-hello.md",
-            '---\ntitle: "Hello World"\ndate: 2025-10-17\ntags: [intro]\ndescription: "First post"\n---\n\nHello content.\n',
+            "---\n"
+            'title: "Hello World"\n'
+            "date: 2025-10-17\n"
+            "tags: [intro]\n"
+            'description: "First post"\n'
+            "---\n\n"
+            "Hello content.\n",
         )
         _write_page(
             pages_dir,
@@ -73,7 +79,13 @@ class TestCompleteBuildPipeline:
         _write_post(
             posts_dir,
             "2025-10-17-rss-test.md",
-            '---\ntitle: "RSS Test Post"\ndate: 2025-10-17\ntags: [rss]\ndescription: "Testing RSS"\n---\n\nRSS body.\n',
+            "---\n"
+            'title: "RSS Test Post"\n'
+            "date: 2025-10-17\n"
+            "tags: [rss]\n"
+            'description: "Testing RSS"\n'
+            "---\n\n"
+            "RSS body.\n",
         )
 
         site = _build(sample_project)
@@ -134,7 +146,13 @@ class TestDraftFiltering:
         _write_post(
             posts_dir,
             "2025-10-16-secret.md",
-            '---\ntitle: "Secret Draft"\ndate: 2025-10-16\ntags: [visible]\ndraft: true\n---\n\nSecret.\n',
+            "---\n"
+            'title: "Secret Draft"\n'
+            "date: 2025-10-16\n"
+            "tags: [visible]\n"
+            "draft: true\n"
+            "---\n\n"
+            "Secret.\n",
         )
 
         site = _build(sample_project)
@@ -159,7 +177,13 @@ class TestDraftFiltering:
         _write_post(
             posts_dir,
             "2025-10-16-hidden.md",
-            '---\ntitle: "Hidden Draft"\ndate: 2025-10-16\ntags: [shared-tag]\ndraft: true\n---\n\nHidden.\n',
+            "---\n"
+            'title: "Hidden Draft"\n'
+            "date: 2025-10-16\n"
+            "tags: [shared-tag]\n"
+            "draft: true\n"
+            "---\n\n"
+            "Hidden.\n",
         )
 
         site = _build(sample_project)
