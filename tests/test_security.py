@@ -7,7 +7,7 @@ and other security vulnerabilities while allowing legitimate operations.
 
 import pytest
 
-from static_site_gen.generator.utils import get_output_path
+from static_site_gen.generator.output import get_output_path
 
 
 class TestPathTraversalSecurity:

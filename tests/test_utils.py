@@ -9,7 +9,7 @@ from datetime import datetime
 
 import pytest
 
-from static_site_gen.generator.utils import (
+from static_site_gen.generator.output import (
     clean_output_dir,
     collect_posts_by_tag,
     copy_static_files,

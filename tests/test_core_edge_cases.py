@@ -158,6 +158,15 @@ This is published.
         post1.metadata.draft = False
         post1.metadata.description = "Description 1"
         post1.content = "Content 1"
+        post1.to_dict.return_value = {
+            "title": "Post 1",
+            "date": "2023-01-01",
+            "slug": "post-1",
+            "tags": [],
+            "draft": False,
+            "description": "Description 1",
+            "content": "Content 1",
+        }
 
         post2 = Mock()
         post2.metadata.title = "Post 2"
@@ -167,6 +176,15 @@ This is published.
         post2.metadata.draft = False
         post2.metadata.description = "Description 2"
         post2.content = "Content 2"
+        post2.to_dict.return_value = {
+            "title": "Post 2",
+            "date": "2023-01-02",
+            "slug": "post-2",
+            "tags": [],
+            "draft": False,
+            "description": "Description 2",
+            "content": "Content 2",
+        }
 
         posts = [post1, post2]
 

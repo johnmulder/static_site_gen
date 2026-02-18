@@ -68,6 +68,18 @@ class ParsedContent:
     raw_content: str
     filepath: Path
 
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for template rendering."""
+        return {
+            "title": self.metadata.title,
+            "date": self.metadata.date,
+            "slug": self.metadata.slug,
+            "tags": self.metadata.tags,
+            "draft": self.metadata.draft,
+            "description": self.metadata.description,
+            "content": self.content,
+        }
+
 
 def extract_front_matter(content: str, filepath: Path) -> tuple[dict[str, Any], str]:
     """

@@ -27,34 +27,20 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## 3. Extract Repeated Dict Conversion to Helper
+## 3. Extract Repeated Dict Conversion to Helper -- DONE
 
-**Problem:** The `ParsedContent` -> `dict` conversion is copy-pasted four times
-in `core.py` (`generate_posts`, `generate_index`, `generate_tag_pages`,
-`generate_pages`).
-
-**Work:**
-
-- Add a `to_dict()` method on `ParsedContent` (or a standalone function in parser)
-- Replace the four inline conversions with calls to it
+Added `to_dict()` method to `ParsedContent` dataclass in `parser.py`.
+Replaced four inline dict-building blocks in `core.py` with calls to it.
+Updated mock objects in `test_core_edge_cases.py` to provide `to_dict()`.
+All 108 tests pass.
 
 ______________________________________________________________________
 
-## 4. Rename `utils.py` to Express Intent
+## 4. Rename `utils.py` to Express Intent -- DONE
 
-**Problem:** The coding standards say to avoid "util" or "helper" suffixes and
-instead express intent. The module contains file operations, URL generation,
-sorting, filtering, and pagination.
-
-**Options:**
-
-- Rename to `files.py` + `urls.py` (split by concern)
-- Rename to `output.py` (most functions relate to output generation)
-- Keep as-is if the cost of renaming outweighs the benefit at this stage
-
-**Recommendation:** Rename to `output.py` since the dominant operations are
-URL generation, path resolution, file writing, pagination, and directory
-management -- all output-side concerns. Update all imports in `core.py` and tests.
+Renamed `static_site_gen/generator/utils.py` to `output.py`. Updated module
+docstring to describe output-side responsibilities. Updated all imports in
+`core.py`, `test_utils.py`, and `test_security.py`. All 108 tests pass.
 
 ______________________________________________________________________
 
@@ -167,20 +153,11 @@ README advertises it as "Coming soon."
 
 ______________________________________________________________________
 
-## 10. Protect Content Files from mdformat
+## 2. Protect Content Files from mdformat -- DONE
 
-**Problem:** The root cause of issue 1. `mdformat` does not understand YAML
-front matter by default and rewrites the `---` delimiters.
-
-**Options:**
-
-- Install `mdformat-frontmatter` plugin and add to dev dependencies
-- Add content files to an exclude pattern in the mdformat config
-- Add a note to `DEVELOPMENT.md` warning about this
-
-**Recommendation:** Add `mdformat-frontmatter` to dev dependencies in
-`pyproject.toml` and document it. Also add a glob exclude for `content/` in
-any formatting CI step as a safety net.
+Added `mdformat-frontmatter` to pre-commit hook additional_dependencies and
+`pyproject.toml` dev dependencies. Added `exclude: "^content/"` to the mdformat
+hook as a safety net. Pre-commit hook now passes without corrupting front matter.
 
 ______________________________________________________________________
 

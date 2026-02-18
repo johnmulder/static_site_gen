@@ -12,9 +12,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
 
-from .parser import ParseError, parse_content_file
-from .renderer import TemplateRenderer
-from .utils import (
+from .output import (
     clean_output_dir,
     collect_posts_by_tag,
     copy_static_files,
@@ -26,6 +24,8 @@ from .utils import (
     sort_posts_by_date,
     write_file,
 )
+from .parser import ParseError, parse_content_file
+from .renderer import TemplateRenderer
 
 
 class SiteGenerator:
@@ -245,17 +245,7 @@ class SiteGenerator:
 
         for post in posts:
             try:
-                post_dict = {
-                    "title": post.metadata.title,
-                    "date": post.metadata.date,
-                    "slug": post.metadata.slug,
-                    "tags": post.metadata.tags,
-                    "draft": post.metadata.draft,
-                    "description": post.metadata.description,
-                    "content": post.content,
-                }
-
-                html_content = self.renderer.render_post(post_dict, self.config)
+                html_content = self.renderer.render_post(post.to_dict(), self.config)
                 url_path = generate_post_url(post.metadata.slug)
                 output_path = get_output_path(self.output_dir, url_path)
                 write_file(output_path, html_content)
@@ -280,19 +270,7 @@ class SiteGenerator:
         ), "Configuration must be loaded before generating index"
 
         try:
-            posts_dict = []
-            for post in posts:
-                posts_dict.append(
-                    {
-                        "title": post.metadata.title,
-                        "date": post.metadata.date,
-                        "slug": post.metadata.slug,
-                        "tags": post.metadata.tags,
-                        "draft": post.metadata.draft,
-                        "description": post.metadata.description,
-                        "content": post.content,
-                    }
-                )
+            posts_dict = [post.to_dict() for post in posts]
 
             sorted_posts = sort_posts_by_date(posts_dict)
 
@@ -341,19 +319,7 @@ class SiteGenerator:
             self.config is not None
         ), "Configuration must be loaded before generating tag pages"
 
-        posts_dict = []
-        for post in posts:
-            posts_dict.append(
-                {
-                    "title": post.metadata.title,
-                    "date": post.metadata.date,
-                    "slug": post.metadata.slug,
-                    "tags": post.metadata.tags,
-                    "draft": post.metadata.draft,
-                    "description": post.metadata.description,
-                    "content": post.content,
-                }
-            )
+        posts_dict = [post.to_dict() for post in posts]
 
         posts_by_tag = collect_posts_by_tag(posts_dict)
 
@@ -389,17 +355,7 @@ class SiteGenerator:
 
         for page in pages:
             try:
-                page_dict = {
-                    "title": page.metadata.title,
-                    "date": page.metadata.date,
-                    "slug": page.metadata.slug,
-                    "tags": page.metadata.tags,
-                    "draft": page.metadata.draft,
-                    "description": page.metadata.description,
-                    "content": page.content,
-                }
-
-                html_content = self.renderer.render_page(page_dict, self.config)
+                html_content = self.renderer.render_page(page.to_dict(), self.config)
 
                 url_path = generate_page_url(page.metadata.slug)
                 output_path = get_output_path(self.output_dir, url_path)

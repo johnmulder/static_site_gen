@@ -1,8 +1,9 @@
 """
-Utility functions for static site generation.
+Output generation: file operations, URL routing, and pagination.
 
-This module provides helper functions for file operations, URL generation,
-and other common tasks used throughout the site generation process.
+Handles the output side of the build pipeline -- generating filesystem paths
+from URL patterns, writing rendered content, copying static assets, and
+organizing posts for pagination and tag archives.
 """
 
 import shutil
