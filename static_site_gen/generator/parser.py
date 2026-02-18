@@ -262,8 +262,15 @@ def generate_slug(title: str) -> str:
 
 def sanitize_html(html_content: str) -> str:
     """
-    Sanitize HTML content to remove potentially dangerous elements.
-    This is a basic implementation for security.
+    Remove script tags from HTML content as a basic safety measure.
+
+    Trust boundary: content is authored locally in Markdown files by the site
+    owner.  This function provides defense-in-depth against accidental script
+    injection (e.g. copy-pasted snippets) but is NOT a full sanitizer.  It does
+    not handle iframes, event-handler attributes, or javascript: URLs.
+
+    If third-party or user-submitted content is ever processed, replace this
+    with a proper allowlist-based sanitizer such as the ``nh3`` library.
     """
     sanitized = re.sub(
         r"<script\b[^<]*(?:(?!</script>)<[^<]*)*</script>",

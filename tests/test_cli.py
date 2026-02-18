@@ -73,11 +73,13 @@ author: "Test Author"
             assert exit_code == 0
             assert (temp_path / "site").exists()
 
-    def test_main_with_init_command(self):
-        """Test main function with init command."""
-        with patch("sys.argv", ["cli.py", "init", "test-project"]):
+    def test_main_with_init_command(self, tmp_path):
+        """Test main function with init command creates project."""
+        project_dir = tmp_path / "test-project"
+        with patch("sys.argv", ["cli.py", "init", str(project_dir)]):
             exit_code = main()
-            assert exit_code == 1
+            assert exit_code == 0
+            assert (project_dir / "config.yaml").exists()
 
     def test_main_with_unknown_command(self):
         """Test main function with unknown command."""
@@ -183,22 +185,47 @@ author: "Test Author"
             exit_code = cmd_build(args)
             assert exit_code == 1
 
-    def test_init_command_not_implemented(self):
-        """Test init command (currently not implemented)."""
+    def test_init_creates_directory_structure(self, tmp_path):
+        """Test that init creates all expected directories and files."""
+        project = tmp_path / "new-site"
         args = Mock()
-        args.command = "init"
+        args.project_name = str(project)
 
-        # The cmd_init function just prints a message and returns 1
+        exit_code = cmd_init(args)
+        assert exit_code == 0
+
+        assert (project / "config.yaml").exists()
+        assert (project / "content" / "posts").is_dir()
+        assert (project / "content" / "pages").is_dir()
+        assert (project / "templates").is_dir()
+        assert (project / "static" / "style.css").exists()
+
+        # Sample content created
+        posts = list((project / "content" / "posts").glob("*.md"))
+        assert len(posts) == 1
+        assert (project / "content" / "pages" / "about.md").exists()
+
+    def test_init_refuses_nonempty_directory(self, tmp_path):
+        """Test that init refuses to overwrite a non-empty directory."""
+        project = tmp_path / "existing"
+        project.mkdir()
+        (project / "file.txt").write_text("occupied")
+
+        args = Mock()
+        args.project_name = str(project)
+
         exit_code = cmd_init(args)
         assert exit_code == 1
 
-    def test_cmd_init_not_implemented(self):
-        """Test that init command is not yet implemented."""
+    def test_init_config_contains_project_name(self, tmp_path):
+        """Test that generated config.yaml uses the project name."""
+        project = tmp_path / "my-blog"
         args = Mock()
-        args.project_name = "test-project"
+        args.project_name = str(project)
 
-        exit_code = cmd_init(args)
-        assert exit_code == 1
+        cmd_init(args)
+        config_text = (project / "config.yaml").read_text()
+        assert str(project) in config_text
 
     def test_error_handling_in_main(self):
         """Test error handling in main function."""

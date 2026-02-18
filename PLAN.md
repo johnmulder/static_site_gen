@@ -71,36 +71,23 @@ generation. Added 4 dedicated `discover_content()` tests. Split
 
 ______________________________________________________________________
 
-## 8. Harden HTML Sanitization
+## 8. Harden HTML Sanitization -- DONE
 
-**Problem:** `sanitize_html()` in `parser.py` only strips `<script>` tags via
-regex. It ignores `<iframe>`, event handler attributes (`onclick`, `onerror`),
-and `javascript:` URLs.
-
-**Options:**
-
-- Replace with a proper allowlist-based sanitizer (e.g., `bleach` or
-  `nh3` library)
-- Expand the regex approach to cover more vectors (fragile, not recommended)
-- Document that content is trusted (author-controlled) and accept the risk
-
-**Recommendation:** Since content comes from local Markdown files written by the
-site author, document the trust boundary explicitly. If third-party content is
-ever supported, add `nh3` as a dependency for proper sanitization.
+Documented the trust boundary in `sanitize_html()` docstring: content is
+author-controlled local Markdown, so the basic script-tag removal serves as
+defense-in-depth. Docstring now explicitly notes the limitation and recommends
+`nh3` if third-party content is ever supported.
 
 ______________________________________________________________________
 
-## 9. Implement `init` Command
+## 9. Implement `init` Command -- DONE
 
-**Problem:** `cli.py` has a stub that prints "not implemented" and returns 1.
-README advertises it as "Coming soon."
-
-**Work:**
-
-- Create project scaffold: `content/posts/`, `content/pages/`, `templates/`,
-  `static/`, `config.yaml`
-- Copy default templates and sample content
-- Add tests for the init command
+Replaced the stub with a working `cmd_init` that scaffolds a new project
+directory with `config.yaml`, `content/posts/` (sample hello-world post),
+`content/pages/` (about page), `templates/` (copies real templates from the
+package), and `static/style.css`. Refuses to overwrite non-empty directories.
+Added 4 tests for the init command (structure, refusal, config content, main
+integration). Updated 2 old "not implemented" tests. All 145 tests pass.
 
 ______________________________________________________________________
 
