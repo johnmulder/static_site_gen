@@ -5,6 +5,7 @@ This module provides the CLI commands for building and managing static sites.
 """
 
 import argparse
+import logging
 import shutil
 import sys
 from collections.abc import Callable
@@ -81,6 +82,10 @@ def cmd_build(args: argparse.Namespace) -> int:
     Args:
         args: Parsed command-line arguments
     """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(message)s",
+    )
     try:
         project_root = Path(args.project_dir).resolve()
         generator = SiteGenerator(project_root)

@@ -5,9 +5,9 @@ This module contains the main build orchestration logic that coordinates
 the entire content -> template -> output pipeline.
 """
 
+import logging
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -25,8 +25,10 @@ from .output import (
     sort_posts_by_date,
     write_file,
 )
-from .parser import ParseError, parse_content_file
+from .parser import ParsedContent, ParseError, parse_content_file
 from .renderer import TemplateRenderer
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -221,7 +223,9 @@ class SiteGenerator:
 
         return content_files
 
-    def _process_content_files(self, files: list[Path], label: str) -> list[Any]:
+    def _process_content_files(
+        self, files: list[Path], label: str
+    ) -> list[ParsedContent]:
         """
         Parse content files with slug collision resolution.
 
@@ -232,12 +236,13 @@ class SiteGenerator:
         Returns:
             List of ParsedContent objects
         """
-        assert self.config is not None
+        if self.config is None:
+            raise RuntimeError("Configuration must be loaded before processing content")
 
         extensions = self.config.markdown_extensions
         timezone = self.config.timezone
         slugs: set[str] = set()
-        results: list[Any] = []
+        results: list[ParsedContent] = []
 
         for filepath in files:
             try:
@@ -247,21 +252,26 @@ class SiteGenerator:
                 final_slug = self._resolve_slug_collision(original_slug, slugs)
 
                 if final_slug != original_slug:
-                    print(
-                        f"Warning: {label.capitalize()} slug collision resolved "
-                        f"for '{parsed.metadata.title}': '{original_slug}' -> '{final_slug}'"
+                    logger.warning(
+                        "%s slug collision resolved for '%s': '%s' -> '%s'",
+                        label.capitalize(),
+                        parsed.metadata.title,
+                        original_slug,
+                        final_slug,
                     )
                     parsed.metadata = replace(parsed.metadata, slug=final_slug)
 
                 slugs.add(final_slug)
                 results.append(parsed)
             except (ParseError, OSError, ValueError) as e:
-                print(f"Error processing {label} {filepath}: {e}")
+                logger.error("Error processing %s %s: %s", label, filepath, e)
                 continue
 
         return results
 
-    def process_content(self, content_files: dict[str, list[Path]]) -> dict[str, list]:
+    def process_content(
+        self, content_files: dict[str, list[Path]]
+    ) -> dict[str, list[ParsedContent]]:
         """
         Parse and process all content files.
 
@@ -271,28 +281,25 @@ class SiteGenerator:
         Returns:
             Dictionary with parsed 'posts' and 'pages' data
         """
-        assert (
-            self.config is not None
-        ), "Configuration must be loaded before processing content"
+        if self.config is None:
+            raise RuntimeError("Configuration must be loaded before processing content")
 
         return {
             "posts": self._process_content_files(content_files["posts"], "post"),
             "pages": self._process_content_files(content_files["pages"], "page"),
         }
 
-    def generate_posts(self, posts: list[Any]) -> None:
+    def generate_posts(self, posts: list[ParsedContent]) -> None:
         """
         Generate individual post pages.
 
         Args:
             posts: List of ParsedContent objects
         """
-        assert (
-            self.renderer is not None
-        ), "Renderer must be initialized before generating posts"
-        assert (
-            self.config is not None
-        ), "Configuration must be loaded before generating posts"
+        if self.renderer is None or self.config is None:
+            raise RuntimeError(
+                "Renderer and config must be initialized before generating posts"
+            )
 
         for post in posts:
             try:
@@ -301,24 +308,25 @@ class SiteGenerator:
                 output_path = get_output_path(self.output_dir, url_path)
                 write_file(output_path, html_content)
             except (OSError, ValueError) as e:
-                print(
-                    f"Error generating post '{post.metadata.title}' ({post.metadata.slug}): {e}"
+                logger.error(
+                    "Error generating post '%s' (%s): %s",
+                    post.metadata.title,
+                    post.metadata.slug,
+                    e,
                 )
                 continue
 
-    def generate_index(self, posts: list) -> None:
+    def generate_index(self, posts: list[ParsedContent]) -> None:
         """
         Generate homepage with chronologically sorted posts, including pagination.
 
         Args:
             posts: List of ParsedContent objects (will be sorted by date)
         """
-        assert (
-            self.renderer is not None
-        ), "Renderer must be initialized before generating index"
-        assert (
-            self.config is not None
-        ), "Configuration must be loaded before generating index"
+        if self.renderer is None or self.config is None:
+            raise RuntimeError(
+                "Renderer and config must be initialized before generating index"
+            )
 
         try:
             posts_dict = [post.to_dict() for post in posts]
@@ -353,22 +361,20 @@ class SiteGenerator:
                 write_file(output_path, html_content)
 
         except (OSError, ValueError) as e:
-            print(f"Error generating index pages: {e}")
+            logger.error("Error generating index pages: %s", e)
             raise
 
-    def generate_tag_pages(self, posts: list[Any]) -> None:
+    def generate_tag_pages(self, posts: list[ParsedContent]) -> None:
         """
         Generate tag archive pages.
 
         Args:
             posts: List of ParsedContent objects
         """
-        assert (
-            self.renderer is not None
-        ), "Renderer must be initialized before generating tag pages"
-        assert (
-            self.config is not None
-        ), "Configuration must be loaded before generating tag pages"
+        if self.renderer is None or self.config is None:
+            raise RuntimeError(
+                "Renderer and config must be initialized before generating tag pages"
+            )
 
         posts_dict = [post.to_dict() for post in posts]
 
@@ -387,22 +393,20 @@ class SiteGenerator:
 
                 write_file(output_path, html_content)
             except (OSError, ValueError) as e:
-                print(f"Error generating tag page for '{tag}': {e}")
+                logger.error("Error generating tag page for '%s': %s", tag, e)
                 continue
 
-    def generate_feed(self, posts: list[Any]) -> None:
+    def generate_feed(self, posts: list[ParsedContent]) -> None:
         """
         Generate RSS feed from published posts.
 
         Args:
             posts: List of ParsedContent objects (will be sorted by date)
         """
-        assert (
-            self.renderer is not None
-        ), "Renderer must be initialized before generating feed"
-        assert (
-            self.config is not None
-        ), "Configuration must be loaded before generating feed"
+        if self.renderer is None or self.config is None:
+            raise RuntimeError(
+                "Renderer and config must be initialized before generating feed"
+            )
 
         try:
             posts_dict = [post.to_dict() for post in posts]
@@ -412,21 +416,19 @@ class SiteGenerator:
             feed_path = self.output_dir / "feed.xml"
             write_file(feed_path, xml_content)
         except (OSError, ValueError) as e:
-            print(f"Error generating RSS feed: {e}")
+            logger.error("Error generating RSS feed: %s", e)
 
-    def generate_pages(self, pages: list[Any]) -> None:
+    def generate_pages(self, pages: list[ParsedContent]) -> None:
         """
         Generate static pages.
 
         Args:
             pages: List of ParsedContent objects
         """
-        assert (
-            self.renderer is not None
-        ), "Renderer must be initialized before generating pages"
-        assert (
-            self.config is not None
-        ), "Configuration must be loaded before generating pages"
+        if self.renderer is None or self.config is None:
+            raise RuntimeError(
+                "Renderer and config must be initialized before generating pages"
+            )
 
         for page in pages:
             try:
@@ -437,8 +439,11 @@ class SiteGenerator:
 
                 write_file(output_path, html_content)
             except (OSError, ValueError) as e:
-                print(
-                    f"Error generating page '{page.metadata.title}' ({page.metadata.slug}): {e}"
+                logger.error(
+                    "Error generating page '%s' (%s): %s",
+                    page.metadata.title,
+                    page.metadata.slug,
+                    e,
                 )
                 continue
 
@@ -458,55 +463,60 @@ class SiteGenerator:
             FileNotFoundError: If required directories or files are missing
             ValueError: If configuration is invalid
         """
-        print("Starting site build...")
+        logger.info("Starting site build...")
 
-        print("Loading configuration...")
+        logger.info("Loading configuration...")
         self.load_config()
-        assert self.config is not None, "Configuration should be loaded"
+        if self.config is None:
+            raise RuntimeError("Configuration failed to load")
 
         self.output_dir = self.project_root / self.config.output_dir
 
-        print("Initializing template renderer...")
+        logger.info("Initializing template renderer...")
         self.renderer = TemplateRenderer(self.template_dir)
 
-        print("Cleaning output directory...")
+        logger.info("Cleaning output directory...")
         clean_output_dir(self.output_dir)
-        print("Discovering content files...")
+        logger.info("Discovering content files...")
         content_files = self.discover_content()
-        print(
-            f"Found {len(content_files['posts'])} posts and {len(content_files['pages'])} pages"
+        logger.info(
+            "Found %d posts and %d pages",
+            len(content_files["posts"]),
+            len(content_files["pages"]),
         )
 
         # Process content
-        print("Processing content...")
+        logger.info("Processing content...")
         processed_content = self.process_content(content_files)
 
         # Filter published posts
         posts = [post for post in processed_content["posts"] if not post.metadata.draft]
         pages = processed_content["pages"]
 
-        print(f"Processing {len(posts)} published posts and {len(pages)} pages")
+        logger.info(
+            "Processing %d published posts and %d pages", len(posts), len(pages)
+        )
 
         # Generate content
         if posts:
-            print("Generating post pages...")
+            logger.info("Generating post pages...")
             self.generate_posts(posts)
 
-            print("Generating index page...")
+            logger.info("Generating index page...")
             self.generate_index(posts)
 
-            print("Generating tag pages...")
+            logger.info("Generating tag pages...")
             self.generate_tag_pages(posts)
 
-            print("Generating RSS feed...")
+            logger.info("Generating RSS feed...")
             self.generate_feed(posts)
 
         if pages:
-            print("Generating static pages...")
+            logger.info("Generating static pages...")
             self.generate_pages(pages)
 
         # Copy static assets
-        print("Copying static assets...")
+        logger.info("Copying static assets...")
         self.copy_assets()
 
-        print(f"Site build complete! Generated site in: {self.output_dir}")
+        logger.info("Site build complete! Generated site in: %s", self.output_dir)

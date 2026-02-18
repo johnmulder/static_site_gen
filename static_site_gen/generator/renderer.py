@@ -5,10 +5,15 @@ This module handles template loading, rendering, and inheritance using Jinja2.
 Provides clean separation between content and presentation layers.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
+
+if TYPE_CHECKING:
+    from .core import SiteConfig
 
 
 class TemplateRenderer:
@@ -63,7 +68,7 @@ class TemplateRenderer:
                 f"Template '{template_name}' not found in {self.template_dir}"
             ) from e
 
-    def render_post(self, post_data: dict[str, Any], site_config: Any) -> str:
+    def render_post(self, post_data: dict[str, Any], site_config: SiteConfig) -> str:
         """
         Render individual blog post using post.html template.
 
@@ -82,7 +87,10 @@ class TemplateRenderer:
         return self.render_template("post.html", context)
 
     def render_index_page(
-        self, posts: list, site_config: Any, pagination: dict[str, Any]
+        self,
+        posts: list[dict[str, Any]],
+        site_config: SiteConfig,
+        pagination: dict[str, Any],
     ) -> str:
         """
         Render paginated index page using index.html template.
@@ -107,7 +115,9 @@ class TemplateRenderer:
         }
         return self.render_template("index.html", context)
 
-    def render_tag_page(self, tag: str, posts: list, site_config: Any) -> str:
+    def render_tag_page(
+        self, tag: str, posts: list[dict[str, Any]], site_config: SiteConfig
+    ) -> str:
         """
         Render tag archive page using tag.html template.
 
@@ -130,7 +140,7 @@ class TemplateRenderer:
     def render_page(
         self,
         page_data: dict[str, Any],
-        site_config: Any,
+        site_config: SiteConfig,
         template_name: str | None = None,
     ) -> str:
         """
@@ -152,7 +162,7 @@ class TemplateRenderer:
         }
         return self.render_template(template, context)
 
-    def render_feed(self, posts: list, site_config: Any) -> str:
+    def render_feed(self, posts: list[dict[str, Any]], site_config: SiteConfig) -> str:
         """
         Render RSS feed using feed.xml template.
 
@@ -169,7 +179,7 @@ class TemplateRenderer:
         }
         return self.render_template("feed.xml", context)
 
-    def get_available_templates(self) -> list:
+    def get_available_templates(self) -> list[str]:
         """
         Get list of available template files.
 
