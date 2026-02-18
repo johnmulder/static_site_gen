@@ -28,3 +28,14 @@ repos:
           - mdformat-gfm
           - mdformat-frontmatter
         exclude: "^content/"
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: mypy
+        language: system
+        types: [python]
+        files: "^static_site_gen/"
+        pass_filenames: false
+        args: [static_site_gen/]

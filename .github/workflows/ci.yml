@@ -40,5 +40,8 @@ jobs:
       - name: Mypy
         run: mypy static_site_gen
 
+      - name: Pylint
+        run: pylint static_site_gen/
+
       - name: Pytest
-        run: pytest --cov=static_site_gen --cov-report=term-missing
+        run: pytest --cov=static_site_gen --cov-report=term-missing --cov-fail-under=95
