@@ -8,8 +8,12 @@ import argparse
 import shutil
 import sys
 from collections.abc import Callable
+from datetime import date
 from pathlib import Path
 from typing import cast
+
+import yaml
+from jinja2 import TemplateNotFound
 
 from .generator.core import SiteGenerator
 
@@ -89,7 +93,7 @@ def cmd_build(args: argparse.Namespace) -> int:
     except ValueError as e:
         print(f"Configuration error: {e}")
         return 1
-    except Exception as e:
+    except (OSError, RuntimeError, yaml.YAMLError, TemplateNotFound) as e:
         print(f"Build failed: {e}")
         return 1
 
@@ -105,8 +109,6 @@ def cmd_init(args: argparse.Namespace) -> int:
     Args:
         args: Parsed command-line arguments (expects ``project_name``)
     """
-    from datetime import date
-
     project_dir = Path(args.project_name).resolve()
 
     if project_dir.exists() and any(project_dir.iterdir()):

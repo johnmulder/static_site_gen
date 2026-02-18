@@ -127,8 +127,8 @@ def get_output_path(base_dir: Path, url_path: str) -> Path:
         resolved_output = output_path.resolve()
 
         resolved_output.relative_to(resolved_base)
-    except (OSError, ValueError):
-        raise ValueError(f"Invalid or dangerous path: {url_path}")
+    except (OSError, ValueError) as exc:
+        raise ValueError(f"Invalid or dangerous path: {url_path}") from exc
 
     return output_path
 

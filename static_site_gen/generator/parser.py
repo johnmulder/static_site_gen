@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import markdown
 import yaml
@@ -178,7 +178,7 @@ def parse_date(
     """
     try:
         tz = ZoneInfo(timezone)
-    except Exception:
+    except (KeyError, ZoneInfoNotFoundError):
         # Fallback to UTC if timezone is invalid
         tz = ZoneInfo("UTC")
 
@@ -186,8 +186,7 @@ def parse_date(
         # If already timezone-aware, return as-is; otherwise localize to specified timezone
         if date_value.tzinfo is not None:
             return date_value
-        else:
-            return date_value.replace(tzinfo=tz)
+        return date_value.replace(tzinfo=tz)
 
     if isinstance(date_value, dt.date):
         # Convert date to datetime (midnight) with timezone
@@ -291,7 +290,8 @@ def parse_content_file(
 
     Args:
         filepath: Path to the content file
-        markdown_extensions: List of markdown extensions to use (defaults to ["extra", "codehilite", "toc"])
+        markdown_extensions: List of markdown extensions to use
+            (defaults to ["extra", "codehilite", "toc"])
         timezone: IANA timezone name for date parsing (defaults to UTC)
 
     Returns:
