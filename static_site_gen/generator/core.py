@@ -5,8 +5,9 @@ This module contains the main build orchestration logic that coordinates
 the entire content -> template -> output pipeline.
 """
 
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -26,6 +27,101 @@ from .output import (
 )
 from .parser import ParseError, parse_content_file
 from .renderer import TemplateRenderer
+
+
+@dataclass
+class SiteConfig:
+    """
+    Validated site configuration.
+
+    All required fields are guaranteed present after construction.
+    Optional fields carry sensible defaults.
+    """
+
+    site_name: str
+    base_url: str
+    author: str
+    timezone: str = "UTC"
+    output_dir: str = "site"
+    posts_per_page: int = 10
+    description: str = ""
+    keywords: list[str] = field(default_factory=list)
+    markdown_extensions: list[str] = field(
+        default_factory=lambda: ["codehilite", "tables", "toc"]
+    )
+
+    @classmethod
+    def from_yaml(cls, filepath: Path) -> "SiteConfig":
+        """
+        Load and validate configuration from a YAML file.
+
+        Args:
+            filepath: Path to config.yaml
+
+        Returns:
+            Validated SiteConfig instance
+
+        Raises:
+            FileNotFoundError: If config file doesn't exist
+            ValueError: If required fields are missing or invalid
+        """
+        if not filepath.exists():
+            raise FileNotFoundError(f"Configuration file not found: {filepath}")
+
+        with open(filepath, encoding="utf-8") as f:
+            raw = yaml.safe_load(f)
+
+        if raw is None:
+            raise ValueError("Configuration file is empty or invalid")
+
+        required_fields = ["site_name", "base_url", "author"]
+        missing = [f for f in required_fields if f not in raw]
+        if missing:
+            raise ValueError(f"Missing required config fields: {missing}")
+
+        invalid = []
+        for name in required_fields:
+            value = raw[name]
+            if value is None:
+                invalid.append(f"{name} is null")
+            elif isinstance(value, str) and not value.strip():
+                invalid.append(f"{name} is empty")
+            elif not isinstance(value, str):
+                invalid.append(f"{name} must be a string, got {type(value).__name__}")
+        if invalid:
+            raise ValueError(f"Invalid required config fields: {', '.join(invalid)}")
+
+        posts_per_page = raw.get("posts_per_page", 10)
+        if not isinstance(posts_per_page, int) or posts_per_page <= 0:
+            raise ValueError(
+                f"posts_per_page must be a positive integer, got: {posts_per_page}"
+            )
+
+        parsed_url = urlparse(raw["base_url"])
+        if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+            raise ValueError(
+                f"base_url must be a valid absolute HTTP/HTTPS URL, got: {raw['base_url']}"
+            )
+
+        timezone = raw.get("timezone", "UTC")
+        try:
+            ZoneInfo(timezone)
+        except ZoneInfoNotFoundError as exc:
+            raise ValueError(f"Invalid timezone setting: {timezone}") from exc
+
+        return cls(
+            site_name=raw["site_name"],
+            base_url=raw["base_url"],
+            author=raw["author"],
+            timezone=timezone,
+            output_dir=raw.get("output_dir", "site"),
+            posts_per_page=posts_per_page,
+            description=raw.get("description", ""),
+            keywords=raw.get("keywords", []),
+            markdown_extensions=raw.get(
+                "markdown_extensions", ["codehilite", "tables", "toc"]
+            ),
+        )
 
 
 class SiteGenerator:
@@ -50,7 +146,7 @@ class SiteGenerator:
         self.static_dir = project_root / "static"
         self.output_dir = project_root / "site"
 
-        self.config: dict[str, Any] | None = None
+        self.config: SiteConfig | None = None
         self.renderer: TemplateRenderer | None = None
 
     def _resolve_slug_collision(self, slug: str, existing_slugs: set) -> str:
@@ -74,74 +170,20 @@ class SiteGenerator:
                 return candidate
             counter += 1
 
-    def load_config(self) -> dict[str, Any]:
+    def load_config(self) -> SiteConfig:
         """
         Load and validate site configuration.
 
         Returns:
-            Configuration dictionary
+            Validated SiteConfig instance
 
         Raises:
             FileNotFoundError: If config.yaml doesn't exist
-            ValueError: If required configuration fields are missing
+            ValueError: If required configuration fields are missing or invalid
         """
-        if not self.config_file.exists():
-            raise FileNotFoundError(f"Configuration file not found: {self.config_file}")
-
-        with open(self.config_file, encoding="utf-8") as f:
-            config = yaml.safe_load(f)
-
-        if config is None:
-            raise ValueError("Configuration file is empty or invalid")
-
-        required_fields = ["site_name", "base_url", "author"]
-        missing_fields = [field for field in required_fields if field not in config]
-
-        if missing_fields:
-            raise ValueError(f"Missing required config fields: {missing_fields}")
-
-        # Validate that required fields are not null or empty
-        invalid_fields = []
-        for field in required_fields:
-            value = config[field]
-            if value is None:
-                invalid_fields.append(f"{field} is null")
-            elif isinstance(value, str) and not value.strip():
-                invalid_fields.append(f"{field} is empty")
-            elif not isinstance(value, str):
-                invalid_fields.append(
-                    f"{field} must be a string, got {type(value).__name__}"
-                )
-
-        if invalid_fields:
-            raise ValueError(
-                f"Invalid required config fields: {', '.join(invalid_fields)}"
-            )
-
-        config.setdefault("timezone", "UTC")
-        config.setdefault("output_dir", "site")
-
-        posts_per_page = config.get("posts_per_page", 10)
-        if not isinstance(posts_per_page, int) or posts_per_page <= 0:
-            raise ValueError(
-                f"posts_per_page must be a positive integer, got: {posts_per_page}"
-            )
-
-        parsed_url = urlparse(config["base_url"])
-        if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
-            raise ValueError(
-                f"base_url must be a valid absolute HTTP/HTTPS URL, got: {config['base_url']}"
-            )
-
-        timezone = config.get("timezone", "UTC")
-        try:
-            ZoneInfo(timezone)
-        except ZoneInfoNotFoundError as exc:
-            raise ValueError(f"Invalid timezone setting: {timezone}") from exc
-
-        validated_config = cast(dict[str, Any], config)
-        self.config = validated_config
-        return validated_config
+        config = SiteConfig.from_yaml(self.config_file)
+        self.config = config
+        return config
 
     def discover_content(self) -> dict[str, list[Path]]:
         """
@@ -176,10 +218,8 @@ class SiteGenerator:
 
         processed_content: dict[str, list[Any]] = {"posts": [], "pages": []}
 
-        markdown_extensions = self.config.get(
-            "markdown_extensions", ["extra", "codehilite", "toc"]
-        )
-        timezone = self.config.get("timezone", "UTC")
+        markdown_extensions = self.config.markdown_extensions
+        timezone = self.config.timezone
 
         post_slugs: set[str] = set()
         for post_file in content_files["posts"]:
@@ -274,7 +314,7 @@ class SiteGenerator:
 
             sorted_posts = sort_posts_by_date(posts_dict)
 
-            posts_per_page = self.config.get("posts_per_page", 10)
+            posts_per_page = self.config.posts_per_page
 
             pages = paginate_posts(sorted_posts, posts_per_page)
 
@@ -415,7 +455,7 @@ class SiteGenerator:
         self.load_config()
         assert self.config is not None, "Configuration should be loaded"
 
-        self.output_dir = self.project_root / self.config["output_dir"]
+        self.output_dir = self.project_root / self.config.output_dir
 
         print("Initializing template renderer...")
         self.renderer = TemplateRenderer(self.template_dir)

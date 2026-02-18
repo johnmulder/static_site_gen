@@ -138,9 +138,9 @@ class TestBugFix1ConfigValidation:
         generator = SiteGenerator(tmp_path)
         config = generator.load_config()
 
-        assert config["site_name"] == "Valid Blog"
-        assert config["base_url"] == "https://example.com"
-        assert config["author"] == "Valid Author"
+        assert config.site_name == "Valid Blog"
+        assert config.base_url == "https://example.com"
+        assert config.author == "Valid Author"
 
 
 class TestBugFix2TimezoneHandling:

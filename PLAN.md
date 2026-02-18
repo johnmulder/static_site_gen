@@ -38,18 +38,14 @@ docstring to describe output-side responsibilities. Updated all imports in
 
 ______________________________________________________________________
 
-## 5. Replace Config Dict with Dataclass
+## 7. Replace Config Dict with Dataclass -- DONE
 
-**Problem:** The copilot instructions specify "use dataclass with type hints for
-configuration structure." Config is currently `dict[str, Any]` throughout.
-
-**Work:**
-
-- Create `SiteConfig` dataclass with typed fields in a new module or in `core.py`
-- Move validation logic from `load_config()` into `SiteConfig.__post_init__`
-  or a classmethod constructor
-- Update `TemplateRenderer` methods to accept `SiteConfig` instead of `dict`
-- Update tests accordingly
+Created `SiteConfig` dataclass in `core.py` with typed fields and a
+`from_yaml()` classmethod that encapsulates all validation. Simplified
+`load_config()` to a one-liner delegation. Updated `core.py` to use attribute
+access instead of dict `.get()` and bracket notation. Updated `renderer.py`
+type hints to `Any` and replaced `.get()` calls with `getattr()`. Fixed one
+test that used dict subscript access. All 108 tests pass.
 
 ______________________________________________________________________
 

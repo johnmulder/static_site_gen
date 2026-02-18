@@ -63,9 +63,7 @@ class TemplateRenderer:
                 f"Template '{template_name}' not found in {self.template_dir}"
             ) from e
 
-    def render_post(
-        self, post_data: dict[str, Any], site_config: dict[str, Any]
-    ) -> str:
+    def render_post(self, post_data: dict[str, Any], site_config: Any) -> str:
         """
         Render individual blog post using post.html template.
 
@@ -83,7 +81,7 @@ class TemplateRenderer:
         }
         return self.render_template("post.html", context)
 
-    def render_index(self, posts: list, site_config: dict[str, Any]) -> str:
+    def render_index(self, posts: list, site_config: Any) -> str:
         """
         Render homepage with list of posts using index.html template.
 
@@ -97,12 +95,12 @@ class TemplateRenderer:
         context = {
             "posts": posts,
             "site": site_config,
-            "page_title": site_config.get("site_name", "Blog"),
+            "page_title": getattr(site_config, "site_name", "Blog"),
         }
         return self.render_template("index.html", context)
 
     def render_index_page(
-        self, posts: list, site_config: dict[str, Any], pagination: dict[str, Any]
+        self, posts: list, site_config: Any, pagination: dict[str, Any]
     ) -> str:
         """
         Render paginated index page using index.html template.
@@ -115,7 +113,7 @@ class TemplateRenderer:
         Returns:
             Rendered paginated index HTML
         """
-        page_title = site_config.get("site_name", "Blog")
+        page_title = getattr(site_config, "site_name", "Blog")
         if pagination["current_page"] > 1:
             page_title += f" - Page {pagination['current_page']}"
 
@@ -127,9 +125,7 @@ class TemplateRenderer:
         }
         return self.render_template("index.html", context)
 
-    def render_tag_page(
-        self, tag: str, posts: list, site_config: dict[str, Any]
-    ) -> str:
+    def render_tag_page(self, tag: str, posts: list, site_config: Any) -> str:
         """
         Render tag archive page using tag.html template.
 
@@ -152,7 +148,7 @@ class TemplateRenderer:
     def render_page(
         self,
         page_data: dict[str, Any],
-        site_config: dict[str, Any],
+        site_config: Any,
         template_name: str | None = None,
     ) -> str:
         """
@@ -174,7 +170,7 @@ class TemplateRenderer:
         }
         return self.render_template(template, context)
 
-    def render_feed(self, posts: list, site_config: dict[str, Any]) -> str:
+    def render_feed(self, posts: list, site_config: Any) -> str:
         """
         Render RSS feed using feed.xml template.
 
