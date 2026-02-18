@@ -280,6 +280,37 @@ def sanitize_html(html_content: str) -> str:
     return sanitized
 
 
+def _extract_optional_fields(
+    front_matter: dict[str, Any], filepath: Path
+) -> tuple[list[str], bool, str | None]:
+    """
+    Extract and validate optional front-matter fields.
+
+    Args:
+        front_matter: Parsed front matter dictionary
+        filepath: Path to file (for error reporting)
+
+    Returns:
+        Tuple of (tags, draft, description)
+
+    Raises:
+        ParseError: If any optional field has an invalid type
+    """
+    tags = front_matter.get("tags", [])
+    if not isinstance(tags, list):
+        raise ParseError("Field 'tags' must be a list", filepath)
+
+    draft = front_matter.get("draft", False)
+    if not isinstance(draft, bool):
+        raise ParseError("Field 'draft' must be a boolean", filepath)
+
+    description = front_matter.get("description")
+    if description is not None and not isinstance(description, str):
+        raise ParseError("Field 'description' must be a string", filepath)
+
+    return tags, draft, description
+
+
 def parse_content_file(
     filepath: Path,
     markdown_extensions: list[str] | None = None,
@@ -326,28 +357,15 @@ def parse_content_file(
     if not slug:
         slug = generate_slug(front_matter["title"])
 
-    # Extract optional fields with defaults
-    tags = front_matter.get("tags", [])
-    if not isinstance(tags, list):
-        raise ParseError("Field 'tags' must be a list", filepath)
-
-    draft = front_matter.get("draft", False)
-    if not isinstance(draft, bool):
-        raise ParseError("Field 'draft' must be a boolean", filepath)
-
-    description = front_matter.get("description")
-    if description is not None and not isinstance(description, str):
-        raise ParseError("Field 'description' must be a string", filepath)
+    # Extract and validate optional fields
+    tags, draft, description = _extract_optional_fields(front_matter, filepath)
 
     # Convert Markdown to HTML using configured extensions
-    extensions = markdown_extensions or ["extra", "codehilite", "toc"]
-    md = markdown.Markdown(extensions=extensions)
-    html_content = md.convert(markdown_body)
+    md = markdown.Markdown(
+        extensions=markdown_extensions or ["extra", "codehilite", "toc"]
+    )
+    html_content = sanitize_html(md.convert(markdown_body))
 
-    # Sanitize HTML content to remove dangerous elements
-    html_content = sanitize_html(html_content)
-
-    # Create metadata object
     metadata = ContentMetadata(
         title=front_matter["title"].strip(),
         date=parsed_date,

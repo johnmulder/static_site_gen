@@ -30,12 +30,15 @@ from .renderer import TemplateRenderer
 
 
 @dataclass
-class SiteConfig:
+class SiteConfig:  # pylint: disable=too-many-instance-attributes
     """
     Validated site configuration.
 
     All required fields are guaranteed present after construction.
     Optional fields carry sensible defaults.
+
+    Attributes are kept flat for simplicity -- the config surface is small
+    enough that nested dataclasses would add indirection without clarity.
     """
 
     site_name: str
@@ -140,14 +143,30 @@ class SiteGenerator:
             project_root: Path to project root containing config.yaml
         """
         self.project_root = project_root
-        self.config_file = project_root / "config.yaml"
-        self.content_dir = project_root / "content"
-        self.template_dir = project_root / "templates"
-        self.static_dir = project_root / "static"
         self.output_dir = project_root / "site"
 
         self.config: SiteConfig | None = None
         self.renderer: TemplateRenderer | None = None
+
+    @property
+    def config_file(self) -> Path:
+        """Path to the site configuration file."""
+        return self.project_root / "config.yaml"
+
+    @property
+    def content_dir(self) -> Path:
+        """Path to content source directory."""
+        return self.project_root / "content"
+
+    @property
+    def template_dir(self) -> Path:
+        """Path to Jinja2 template directory."""
+        return self.project_root / "templates"
+
+    @property
+    def static_dir(self) -> Path:
+        """Path to static asset directory."""
+        return self.project_root / "static"
 
     def _resolve_slug_collision(self, slug: str, existing_slugs: set) -> str:
         """
