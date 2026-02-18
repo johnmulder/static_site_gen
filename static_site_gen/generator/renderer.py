@@ -137,6 +137,28 @@ class TemplateRenderer:
         }
         return self.render_template("tag.html", context)
 
+    def render_tag_index(
+        self,
+        tags: list[tuple[str, int]],
+        site_config: SiteConfig,
+    ) -> str:
+        """
+        Render tag index page listing all tags with post counts.
+
+        Args:
+            tags: List of (tag_name, post_count) tuples, sorted alphabetically
+            site_config: Site-wide configuration data
+
+        Returns:
+            Rendered tag index HTML
+        """
+        context = {
+            "tags": tags,
+            "site": site_config,
+            "page_title": "Tags",
+        }
+        return self.render_template("tag_index.html", context)
+
     def render_page(
         self,
         page_data: dict[str, Any],
@@ -178,6 +200,33 @@ class TemplateRenderer:
             "site": site_config,
         }
         return self.render_template("feed.xml", context)
+
+    def render_sitemap(
+        self,
+        posts: list[dict[str, Any]],
+        pages: list[dict[str, Any]],
+        tags: list[str],
+        site_config: SiteConfig,
+    ) -> str:
+        """
+        Render sitemap.xml listing all site URLs.
+
+        Args:
+            posts: List of post dictionaries, sorted by date
+            pages: List of page dictionaries
+            tags: List of tag names
+            site_config: Site-wide configuration data
+
+        Returns:
+            Rendered sitemap XML string
+        """
+        context = {
+            "posts": posts,
+            "pages": pages,
+            "tags": sorted(tags),
+            "site": site_config,
+        }
+        return self.render_template("sitemap.xml", context)
 
     def get_available_templates(self) -> list[str]:
         """

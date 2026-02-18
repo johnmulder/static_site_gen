@@ -89,7 +89,7 @@ def cmd_build(args: argparse.Namespace) -> int:
     try:
         project_root = Path(args.project_dir).resolve()
         generator = SiteGenerator(project_root)
-        generator.build()
+        generator.build(include_drafts=args.drafts)
         return 0
     except FileNotFoundError as e:
         print(f"Error: {e}")
@@ -101,6 +101,40 @@ def cmd_build(args: argparse.Namespace) -> int:
     except (OSError, RuntimeError, yaml.YAMLError, TemplateNotFound) as e:
         print(f"Build failed: {e}")
         return 1
+
+
+def cmd_serve(args: argparse.Namespace) -> int:
+    """
+    Start a local development server for the built site.
+
+    Serves the output directory on localhost with an optional port.
+
+    Args:
+        args: Parsed command-line arguments (expects ``project_dir``, ``port``)
+    """
+    # Lazy imports -- http.server is only needed for the serve command
+    import functools  # pylint: disable=import-outside-toplevel
+    import http.server  # pylint: disable=import-outside-toplevel
+
+    project_root = Path(args.project_dir).resolve()
+    site_dir = project_root / "site"
+
+    if not site_dir.is_dir():
+        print(f"Error: Output directory '{site_dir}' not found. Run 'build' first.")
+        return 1
+
+    handler = functools.partial(
+        http.server.SimpleHTTPRequestHandler, directory=str(site_dir)
+    )
+    port: int = args.port
+
+    print(f"Serving site at http://localhost:{port}/  (press Ctrl+C to stop)")
+    try:
+        with http.server.HTTPServer(("localhost", port), handler) as httpd:
+            httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nServer stopped.")
+    return 0
 
 
 def cmd_init(args: argparse.Namespace) -> int:
@@ -194,12 +228,33 @@ def create_parser() -> argparse.ArgumentParser:
         default=".",
         help="Project directory (default: current directory)",
     )
+    build_parser.add_argument(
+        "--drafts",
+        action="store_true",
+        default=False,
+        help="Include draft posts in the build",
+    )
     build_parser.set_defaults(func=cmd_build)
 
     # Init command
     init_parser = subparsers.add_parser("init", help="Initialize new site project")
     init_parser.add_argument("project_name", help="Name of the new project")
     init_parser.set_defaults(func=cmd_init)
+
+    # Serve command
+    serve_parser = subparsers.add_parser("serve", help="Start local development server")
+    serve_parser.add_argument(
+        "--project-dir",
+        default=".",
+        help="Project directory (default: current directory)",
+    )
+    serve_parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to serve on (default: 8000)",
+    )
+    serve_parser.set_defaults(func=cmd_serve)
 
     return parser
 

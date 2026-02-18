@@ -396,6 +396,32 @@ class SiteGenerator:
                 logger.error("Error generating tag page for '%s': %s", tag, e)
                 continue
 
+    def generate_tag_index(self, posts: list[ParsedContent]) -> None:
+        """
+        Generate tag index page listing all tags with post counts.
+
+        Args:
+            posts: List of published ParsedContent objects
+        """
+        if self.renderer is None or self.config is None:
+            raise RuntimeError(
+                "Renderer and config must be initialized before generating tag index"
+            )
+
+        posts_dict = [post.to_dict() for post in posts]
+        posts_by_tag = collect_posts_by_tag(posts_dict)
+
+        tags_with_counts = sorted(
+            [(tag, len(tag_posts)) for tag, tag_posts in posts_by_tag.items()]
+        )
+
+        try:
+            html_content = self.renderer.render_tag_index(tags_with_counts, self.config)
+            output_path = self.output_dir / "tag" / "index.html"
+            write_file(output_path, html_content)
+        except (OSError, ValueError) as e:
+            logger.error("Error generating tag index: %s", e)
+
     def generate_feed(self, posts: list[ParsedContent]) -> None:
         """
         Generate RSS feed from published posts.
@@ -417,6 +443,36 @@ class SiteGenerator:
             write_file(feed_path, xml_content)
         except (OSError, ValueError) as e:
             logger.error("Error generating RSS feed: %s", e)
+
+    def generate_sitemap(
+        self,
+        posts: list[ParsedContent],
+        pages: list[ParsedContent],
+    ) -> None:
+        """
+        Generate sitemap.xml listing all site URLs.
+
+        Args:
+            posts: Published posts
+            pages: Static pages
+        """
+        if self.renderer is None or self.config is None:
+            raise RuntimeError(
+                "Renderer and config must be initialized before generating sitemap"
+            )
+
+        try:
+            posts_dict = sort_posts_by_date([post.to_dict() for post in posts])
+            pages_dict = [page.to_dict() for page in pages]
+            all_tags = list(collect_posts_by_tag(posts_dict).keys())
+
+            xml_content = self.renderer.render_sitemap(
+                posts_dict, pages_dict, all_tags, self.config
+            )
+            sitemap_path = self.output_dir / "sitemap.xml"
+            write_file(sitemap_path, xml_content)
+        except (OSError, ValueError) as e:
+            logger.error("Error generating sitemap: %s", e)
 
     def generate_pages(self, pages: list[ParsedContent]) -> None:
         """
@@ -455,9 +511,12 @@ class SiteGenerator:
             dest_static_dir = self.output_dir / "static"
             copy_static_files(self.static_dir, dest_static_dir)
 
-    def build(self) -> None:
+    def build(self, include_drafts: bool = False) -> None:
         """
         Execute complete site build process.
+
+        Args:
+            include_drafts: When True, include draft posts in the output.
 
         Raises:
             FileNotFoundError: If required directories or files are missing
@@ -489,8 +548,14 @@ class SiteGenerator:
         logger.info("Processing content...")
         processed_content = self.process_content(content_files)
 
-        # Filter published posts
-        posts = [post for post in processed_content["posts"] if not post.metadata.draft]
+        # Filter published posts (unless --drafts is set)
+        if include_drafts:
+            posts = processed_content["posts"]
+            logger.info("Including draft posts in build")
+        else:
+            posts = [
+                post for post in processed_content["posts"] if not post.metadata.draft
+            ]
         pages = processed_content["pages"]
 
         logger.info(
@@ -508,12 +573,19 @@ class SiteGenerator:
             logger.info("Generating tag pages...")
             self.generate_tag_pages(posts)
 
+            logger.info("Generating tag index...")
+            self.generate_tag_index(posts)
+
             logger.info("Generating RSS feed...")
             self.generate_feed(posts)
 
         if pages:
             logger.info("Generating static pages...")
             self.generate_pages(pages)
+
+        # Sitemap covers posts, pages, and tags
+        logger.info("Generating sitemap...")
+        self.generate_sitemap(posts, pages)
 
         # Copy static assets
         logger.info("Copying static assets...")
