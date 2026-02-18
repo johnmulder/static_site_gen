@@ -339,6 +339,32 @@ class SiteGenerator:
                 print(f"Error generating tag page for '{tag}': {e}")
                 continue
 
+    def generate_feed(self, posts: list[Any]) -> None:
+        """
+        Generate RSS feed from published posts.
+
+        Args:
+            posts: List of ParsedContent objects (will be sorted by date)
+        """
+        assert (
+            self.renderer is not None
+        ), "Renderer must be initialized before generating feed"
+        assert (
+            self.config is not None
+        ), "Configuration must be loaded before generating feed"
+
+        try:
+            from .output import sort_posts_by_date
+
+            posts_dict = [post.to_dict() for post in posts]
+            sorted_posts = sort_posts_by_date(posts_dict)
+
+            xml_content = self.renderer.render_feed(sorted_posts, self.config)
+            feed_path = self.output_dir / "feed.xml"
+            write_file(feed_path, xml_content)
+        except (OSError, ValueError) as e:
+            print(f"Error generating RSS feed: {e}")
+
     def generate_pages(self, pages: list[Any]) -> None:
         """
         Generate static pages.
@@ -422,6 +448,9 @@ class SiteGenerator:
 
             print("Generating tag pages...")
             self.generate_tag_pages(posts)
+
+            print("Generating RSS feed...")
+            self.generate_feed(posts)
 
         if pages:
             print("Generating static pages...")

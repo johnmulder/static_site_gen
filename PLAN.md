@@ -12,18 +12,12 @@ Build and all 108 tests pass.
 
 ______________________________________________________________________
 
-## 2. Implement RSS Feed Generation
+## 6. Implement RSS Feed Generation -- DONE
 
-**Problem:** The build process spec lists "Build RSS feed (`feed.xml`)" as step 8.
-`config.yaml` has a commented-out `# rss_feed: true` placeholder. No code exists.
-
-**Work:**
-
-- Add `generate_feed()` method to `SiteGenerator` in `core.py`
-- Create `templates/feed.xml` Jinja2 template (with autoescape disabled for XML)
-- Output to `site/feed.xml`
-- Add `<link rel="alternate" type="application/rss+xml">` to `base.html`
-- Add tests for feed generation (valid XML, correct post entries, proper dates)
+Added `templates/feed.xml` (RSS 2.0 with Atom self-link), `render_feed()` to
+`TemplateRenderer`, `generate_feed()` to `SiteGenerator`, and RSS `<link>` to
+`base.html`. Feed is generated at `site/feed.xml` during build. Updated
+`get_available_templates()` to include non-HTML template files. All 108 tests pass.
 
 ______________________________________________________________________
 
@@ -59,17 +53,11 @@ configuration structure." Config is currently `dict[str, Any]` throughout.
 
 ______________________________________________________________________
 
-## 6. Enrich Index Template
+## 5. Enrich Index Template -- DONE
 
-**Problem:** `templates/index.html` only renders post titles. The content model
-includes `date`, `description`, and `tags` -- none of which appear on the homepage.
-
-**Work:**
-
-- Add date display to each post item
-- Add description excerpt when available
-- Add tag links per post
-- Keep it minimal but informative
+Added date (`<time>` element), tag links, and description paragraph to each
+post item in `templates/index.html`. All 108 tests pass and generated output
+confirms the enriched listing.
 
 ______________________________________________________________________
 

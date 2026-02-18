@@ -174,6 +174,23 @@ class TemplateRenderer:
         }
         return self.render_template(template, context)
 
+    def render_feed(self, posts: list, site_config: dict[str, Any]) -> str:
+        """
+        Render RSS feed using feed.xml template.
+
+        Args:
+            posts: List of post dictionaries, sorted by date
+            site_config: Site-wide configuration data
+
+        Returns:
+            Rendered RSS XML string
+        """
+        context = {
+            "posts": posts,
+            "site": site_config,
+        }
+        return self.render_template("feed.xml", context)
+
     def get_available_templates(self) -> list:
         """
         Get list of available template files.
@@ -181,4 +198,4 @@ class TemplateRenderer:
         Returns:
             List of template filenames in template directory
         """
-        return [f.name for f in self.template_dir.glob("*.html")]
+        return [f.name for f in self.template_dir.iterdir() if f.is_file()]
