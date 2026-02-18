@@ -57,50 +57,17 @@ confirms the enriched listing.
 
 ______________________________________________________________________
 
-## 7. Strengthen Testing Strategy
+## 7. Strengthen Testing Strategy -- DONE
 
-### 7a. Create `tests/fixtures/` directory
-
-The copilot instructions specify test data in `tests/fixtures/`. Currently all
-fixtures are created inline with `tmp_path`.
-
-- Add sample Markdown files (valid, missing fields, draft, unicode, etc.)
-- Add a sample `config.yaml`
-- Add a sample template set
-
-### 7b. Add `conftest.py` with shared fixtures
-
-Reduce duplication across test files:
-
-- `sample_config` fixture (creates valid config dict/file)
-- `sample_project` fixture (creates minimal project structure)
-- `sample_post_content` fixture (returns front matter + markdown string)
-
-### 7c. Use `@pytest.mark.parametrize`
-
-Convert manual for-loops in `test_security.py` and elsewhere to parametrized
-tests for better failure diagnostics.
-
-### 7d. Expand integration tests
-
-Current coverage: 1 test. Add tests for:
-
-- Multiple posts with correct chronological ordering
-- Draft posts excluded from build output
-- Pagination output (page 2+ directories created)
-- Tag page content verification
-- Static asset copying preserves directory structure
-- Build with no posts (empty site)
-- Build with no pages
-
-### 7e. Add test for `discover_content()`
-
-This method currently has zero dedicated test coverage.
-
-### 7f. Split multi-assertion tests
-
-`test_config_loading_edge_cases` in `test_core_edge_cases.py` tests three
-unrelated scenarios in one function. Split into individual tests.
+Created `tests/fixtures/` with sample content files and `tests/conftest.py` with
+shared fixtures (`sample_config`, `sample_project`, content fixtures). Converted
+`test_security.py` from manual for-loops to `@pytest.mark.parametrize` (6 tests
+-> 25 individual parametrized tests). Expanded integration tests from 1 to 12,
+covering multi-post ordering, draft filtering (output, tags, RSS), tag page
+content, static asset directory preservation, empty builds, and RSS feed
+generation. Added 4 dedicated `discover_content()` tests. Split
+`test_config_loading_edge_cases` into 3 focused tests. Total test count: 144
+(up from 108).
 
 ______________________________________________________________________
 

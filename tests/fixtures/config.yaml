@@ -1,0 +1,9 @@
+site_name: "Test Blog"
+base_url: "https://test.example.com"
+author: "Test Author"
+timezone: "UTC"
+posts_per_page: 5
+output_dir: "site"
+description: "A test blog"
+markdown_extensions:
+  - "toc"

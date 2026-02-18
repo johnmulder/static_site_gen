@@ -207,14 +207,14 @@ This is published.
         result = generator._resolve_slug_collision("test-post", generator.used_slugs)
         assert result == "test-post-5"
 
-    def test_config_loading_edge_cases(self, tmp_path):
-        """Test configuration loading with various error scenarios."""
-        # Test missing config file
+    def test_config_missing_file_raises(self, tmp_path):
+        """Test that loading from a nonexistent path raises FileNotFoundError."""
         generator = SiteGenerator(tmp_path / "nonexistent")
         with pytest.raises(FileNotFoundError):
             generator.load_config()
 
-        # Test invalid YAML syntax
+    def test_config_invalid_yaml_raises(self, tmp_path):
+        """Test that malformed YAML raises YAMLError."""
         (tmp_path / "config.yaml").write_text(
             """
 site_name: "Test Site"
@@ -223,20 +223,21 @@ base_url: "https://example.com"
 """
         )
 
-        generator2 = SiteGenerator(tmp_path)
+        generator = SiteGenerator(tmp_path)
         with pytest.raises(yaml.YAMLError):
-            generator2.load_config()
+            generator.load_config()
 
-        # Test missing required fields
-        (tmp_path / "config2.yaml").write_text(
+    def test_config_missing_required_fields_raises(self, tmp_path):
+        """Test that missing required fields raises ValueError."""
+        (tmp_path / "config.yaml").write_text(
             """
 site_name: "Test Site"
-# Missing base_url and author
 """
         )
 
-        # This would need the SiteGenerator to validate required fields
-        # Currently it may not do this validation
+        generator = SiteGenerator(tmp_path)
+        with pytest.raises(ValueError, match="Missing required config fields"):
+            generator.load_config()
 
     def test_config_rejects_invalid_base_url(self, tmp_path):
         """Test configuration rejects non-http(s) URLs."""
@@ -268,3 +269,59 @@ timezone: "Mars/Phobos"
         generator = SiteGenerator(tmp_path)
         with pytest.raises(ValueError, match="Invalid timezone setting"):
             generator.load_config()
+
+
+class TestDiscoverContent:
+    """Test content file discovery."""
+
+    def _make_generator(self, tmp_path):
+        """Create a SiteGenerator with content directories."""
+        (tmp_path / "content" / "posts").mkdir(parents=True)
+        (tmp_path / "content" / "pages").mkdir(parents=True)
+        return SiteGenerator(tmp_path)
+
+    def test_discovers_markdown_files(self, tmp_path):
+        """Test discovery of .md files in posts and pages directories."""
+        generator = self._make_generator(tmp_path)
+
+        (tmp_path / "content" / "posts" / "2025-01-01-first.md").write_text("# A")
+        (tmp_path / "content" / "posts" / "2025-02-01-second.md").write_text("# B")
+        (tmp_path / "content" / "pages" / "about.md").write_text("# About")
+
+        result = generator.discover_content()
+
+        assert len(result["posts"]) == 2
+        assert len(result["pages"]) == 1
+
+    def test_ignores_non_markdown_files(self, tmp_path):
+        """Test that non-.md files are excluded."""
+        generator = self._make_generator(tmp_path)
+
+        (tmp_path / "content" / "posts" / "2025-01-01-real.md").write_text("# Real")
+        (tmp_path / "content" / "posts" / "notes.txt").write_text("not markdown")
+        (tmp_path / "content" / "posts" / "data.json").write_text("{}")
+
+        result = generator.discover_content()
+
+        assert len(result["posts"]) == 1
+        filenames = [p.name for p in result["posts"]]
+        assert "2025-01-01-real.md" in filenames
+
+    def test_empty_content_directories(self, tmp_path):
+        """Test discovery with empty content directories."""
+        generator = self._make_generator(tmp_path)
+
+        result = generator.discover_content()
+
+        assert result["posts"] == []
+        assert result["pages"] == []
+
+    def test_missing_content_directories(self, tmp_path):
+        """Test discovery when content subdirectories do not exist."""
+        generator = SiteGenerator(tmp_path)
+        # content/ directory does not exist at all
+
+        result = generator.discover_content()
+
+        assert result["posts"] == []
+        assert result["pages"] == []

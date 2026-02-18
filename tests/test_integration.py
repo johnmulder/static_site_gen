@@ -1,117 +1,296 @@
 """
 End-to-end integration tests for the static site generator.
 
-Tests the complete build pipeline from content files to generated output.
+Tests the complete build pipeline from content files to generated output,
+covering multi-post ordering, draft filtering, tag pages, RSS feed,
+static assets, and empty-site edge cases.
 """
 
-import shutil
-import tempfile
 from pathlib import Path
 
 from static_site_gen.generator.core import SiteGenerator
 
 
-def test_complete_build_pipeline():
-    """Test complete site generation from content to output."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_path = Path(temp_dir)
+def _write_post(posts_dir: Path, filename: str, content: str) -> None:
+    """Write a Markdown post file to the given directory."""
+    (posts_dir / filename).write_text(content)
 
-        # Create test project structure
-        content_dir = temp_path / "content"
-        posts_dir = content_dir / "posts"
-        pages_dir = content_dir / "pages"
-        template_dir = temp_path / "templates"
-        static_dir = temp_path / "static"
 
-        posts_dir.mkdir(parents=True)
-        pages_dir.mkdir(parents=True)
-        template_dir.mkdir()
-        static_dir.mkdir()
+def _write_page(pages_dir: Path, filename: str, content: str) -> None:
+    """Write a Markdown page file to the given directory."""
+    (pages_dir / filename).write_text(content)
 
-        # Create test config
-        config_content = """
-site_name: "Test Blog"
-base_url: "https://test.com"
-author: "Test Author"
-description: "A test blog"
-"""
-        (temp_path / "config.yaml").write_text(config_content)
 
-        # Create test content
-        post_content = """---
-title: "Test Post"
-date: 2025-10-17
-tags: [test, blog]
-description: "A test post"
----
+def _build(project_root: Path) -> Path:
+    """Run a full build and return the site output directory."""
+    generator = SiteGenerator(project_root)
+    generator.build()
+    return project_root / "site"
 
-# Test Post
 
-This is a test post.
-"""
-        (posts_dir / "test-post.md").write_text(post_content)
+class TestCompleteBuildPipeline:
+    """Tests for the full build pipeline with typical content."""
 
-        page_content = """---
-title: "Test Page"
-date: 2025-10-17
-description: "A test page"
----
+    def test_basic_post_and_page(self, sample_project):
+        """Test that a single post and page are generated correctly."""
+        posts_dir = sample_project / "content" / "posts"
+        pages_dir = sample_project / "content" / "pages"
 
-# Test Page
+        _write_post(
+            posts_dir,
+            "2025-10-17-hello.md",
+            '---\ntitle: "Hello World"\ndate: 2025-10-17\ntags: [intro]\ndescription: "First post"\n---\n\nHello content.\n',
+        )
+        _write_page(
+            pages_dir,
+            "about.md",
+            '---\ntitle: "About"\ndate: 2025-10-17\n---\n\nAbout page content.\n',
+        )
 
-This is a test page.
-"""
-        (pages_dir / "test-page.md").write_text(page_content)
+        site = _build(sample_project)
 
-        # Create test templates (copy from main project)
-        main_project = Path(__file__).parent.parent
-        template_files = [
-            "base.html",
-            "index.html",
-            "post.html",
-            "tag.html",
-            "page.html",
-        ]
+        # Index exists and references the post
+        index_html = (site / "index.html").read_text()
+        assert "Hello World" in index_html
 
-        for template_file in template_files:
-            src = main_project / "templates" / template_file
-            if src.exists():
-                shutil.copy(src, template_dir / template_file)
+        # Post page exists with correct content
+        post_html = (site / "posts" / "hello-world" / "index.html").read_text()
+        assert "Hello content." in post_html
 
-        # Create test static file
-        (static_dir / "test.css").write_text("body { margin: 0; }")
+        # Page exists
+        page_html = (site / "about" / "index.html").read_text()
+        assert "About page content." in page_html
 
-        # Run build
-        generator = SiteGenerator(temp_path)
-        generator.build()
+        # Tag page exists
+        assert (site / "tag" / "intro" / "index.html").exists()
 
-        # Verify outputs
-        site_dir = temp_path / "site"
-        assert site_dir.exists()
+        # Static assets copied
+        assert (site / "static" / "style.css").exists()
 
-        # Check index page
-        index_file = site_dir / "index.html"
-        assert index_file.exists()
-        index_content = index_file.read_text()
-        assert "Test Post" in index_content
+    def test_rss_feed_generated(self, sample_project):
+        """Test that RSS feed.xml is generated with post data."""
+        posts_dir = sample_project / "content" / "posts"
+        _write_post(
+            posts_dir,
+            "2025-10-17-rss-test.md",
+            '---\ntitle: "RSS Test Post"\ndate: 2025-10-17\ntags: [rss]\ndescription: "Testing RSS"\n---\n\nRSS body.\n',
+        )
 
-        # Check post page
-        post_file = site_dir / "posts" / "test-post" / "index.html"
-        assert post_file.exists()
-        post_html = post_file.read_text()
-        assert "Test Post" in post_html
-        assert "This is a test post" in post_html
+        site = _build(sample_project)
 
-        # Check page
-        page_file = site_dir / "test-page" / "index.html"
-        assert page_file.exists()
-        page_html = page_file.read_text()
-        assert "Test Page" in page_html
+        feed_path = site / "feed.xml"
+        assert feed_path.exists()
+        feed_xml = feed_path.read_text()
+        assert "RSS Test Post" in feed_xml
+        assert "rss-test-post" in feed_xml
+        assert "<rss" in feed_xml
 
-        # Check tag page
-        tag_file = site_dir / "tag" / "test" / "index.html"
-        assert tag_file.exists()
 
-        # Check static assets
-        static_file = site_dir / "static" / "test.css"
-        assert static_file.exists()
+class TestMultiPostOrdering:
+    """Tests that multiple posts are listed in correct chronological order."""
+
+    def test_index_lists_posts_newest_first(self, sample_project):
+        """Posts on the index page appear newest-first."""
+        posts_dir = sample_project / "content" / "posts"
+
+        _write_post(
+            posts_dir,
+            "2025-01-01-older.md",
+            '---\ntitle: "Older Post"\ndate: 2025-01-01\n---\n\nOlder.\n',
+        )
+        _write_post(
+            posts_dir,
+            "2025-06-15-middle.md",
+            '---\ntitle: "Middle Post"\ndate: 2025-06-15\n---\n\nMiddle.\n',
+        )
+        _write_post(
+            posts_dir,
+            "2025-12-31-newest.md",
+            '---\ntitle: "Newest Post"\ndate: 2025-12-31\n---\n\nNewest.\n',
+        )
+
+        site = _build(sample_project)
+        index_html = (site / "index.html").read_text()
+
+        newest_pos = index_html.index("Newest Post")
+        middle_pos = index_html.index("Middle Post")
+        older_pos = index_html.index("Older Post")
+
+        assert newest_pos < middle_pos < older_pos
+
+
+class TestDraftFiltering:
+    """Tests that draft posts are excluded from generated output."""
+
+    def test_draft_post_excluded_from_site(self, sample_project):
+        """Draft posts should not appear in any generated output."""
+        posts_dir = sample_project / "content" / "posts"
+
+        _write_post(
+            posts_dir,
+            "2025-10-17-published.md",
+            '---\ntitle: "Published Post"\ndate: 2025-10-17\ntags: [visible]\n---\n\nPublished.\n',
+        )
+        _write_post(
+            posts_dir,
+            "2025-10-16-secret.md",
+            '---\ntitle: "Secret Draft"\ndate: 2025-10-16\ntags: [visible]\ndraft: true\n---\n\nSecret.\n',
+        )
+
+        site = _build(sample_project)
+
+        # Draft post directory should not exist
+        assert not (site / "posts" / "secret-draft" / "index.html").exists()
+
+        # Draft should not appear in index
+        index_html = (site / "index.html").read_text()
+        assert "Secret Draft" not in index_html
+        assert "Published Post" in index_html
+
+    def test_draft_excluded_from_tag_pages(self, sample_project):
+        """Draft posts should not appear on tag pages."""
+        posts_dir = sample_project / "content" / "posts"
+
+        _write_post(
+            posts_dir,
+            "2025-10-17-public.md",
+            '---\ntitle: "Public"\ndate: 2025-10-17\ntags: [shared-tag]\n---\n\nPublic.\n',
+        )
+        _write_post(
+            posts_dir,
+            "2025-10-16-hidden.md",
+            '---\ntitle: "Hidden Draft"\ndate: 2025-10-16\ntags: [shared-tag]\ndraft: true\n---\n\nHidden.\n',
+        )
+
+        site = _build(sample_project)
+        tag_html = (site / "tag" / "shared-tag" / "index.html").read_text()
+
+        assert "Public" in tag_html
+        assert "Hidden Draft" not in tag_html
+
+    def test_draft_excluded_from_rss(self, sample_project):
+        """Draft posts should not appear in the RSS feed."""
+        posts_dir = sample_project / "content" / "posts"
+
+        _write_post(
+            posts_dir,
+            "2025-10-17-visible.md",
+            '---\ntitle: "Visible Post"\ndate: 2025-10-17\n---\n\nVisible.\n',
+        )
+        _write_post(
+            posts_dir,
+            "2025-10-16-draft.md",
+            '---\ntitle: "Draft Post"\ndate: 2025-10-16\ndraft: true\n---\n\nDraft.\n',
+        )
+
+        site = _build(sample_project)
+        feed_xml = (site / "feed.xml").read_text()
+
+        assert "Visible Post" in feed_xml
+        assert "Draft Post" not in feed_xml
+
+
+class TestTagPages:
+    """Tests for tag archive page generation."""
+
+    def test_separate_tag_pages_created(self, sample_project):
+        """Each unique tag gets its own archive page."""
+        posts_dir = sample_project / "content" / "posts"
+
+        _write_post(
+            posts_dir,
+            "2025-10-17-a.md",
+            '---\ntitle: "Post A"\ndate: 2025-10-17\ntags: [alpha, beta]\n---\n\nA.\n',
+        )
+        _write_post(
+            posts_dir,
+            "2025-10-16-b.md",
+            '---\ntitle: "Post B"\ndate: 2025-10-16\ntags: [beta, gamma]\n---\n\nB.\n',
+        )
+
+        site = _build(sample_project)
+
+        assert (site / "tag" / "alpha" / "index.html").exists()
+        assert (site / "tag" / "beta" / "index.html").exists()
+        assert (site / "tag" / "gamma" / "index.html").exists()
+
+    def test_tag_page_lists_correct_posts(self, sample_project):
+        """Tag page only lists posts with that tag."""
+        posts_dir = sample_project / "content" / "posts"
+
+        _write_post(
+            posts_dir,
+            "2025-10-17-x.md",
+            '---\ntitle: "Tagged X"\ndate: 2025-10-17\ntags: [target-tag]\n---\n\nX.\n',
+        )
+        _write_post(
+            posts_dir,
+            "2025-10-16-y.md",
+            '---\ntitle: "Untagged Y"\ndate: 2025-10-16\ntags: [other]\n---\n\nY.\n',
+        )
+
+        site = _build(sample_project)
+        tag_html = (site / "tag" / "target-tag" / "index.html").read_text()
+
+        assert "Tagged X" in tag_html
+        assert "Untagged Y" not in tag_html
+
+
+class TestStaticAssets:
+    """Tests for static asset copying."""
+
+    def test_static_directory_structure_preserved(self, sample_project):
+        """Nested static files should be copied with their directory structure."""
+        static_dir = sample_project / "static"
+        sub_dir = static_dir / "images"
+        sub_dir.mkdir()
+        (sub_dir / "logo.png").write_bytes(b"\x89PNG")
+
+        # Need at least one post for a build to run fully
+        _write_post(
+            sample_project / "content" / "posts",
+            "2025-10-17-stub.md",
+            '---\ntitle: "Stub"\ndate: 2025-10-17\n---\n\nStub.\n',
+        )
+
+        site = _build(sample_project)
+        assert (site / "static" / "style.css").exists()
+        assert (site / "static" / "images" / "logo.png").exists()
+
+
+class TestEmptyBuilds:
+    """Tests for edge cases with no content."""
+
+    def test_build_with_no_posts(self, sample_project):
+        """Build succeeds with pages but no posts."""
+        pages_dir = sample_project / "content" / "pages"
+        _write_page(
+            pages_dir,
+            "about.md",
+            '---\ntitle: "About"\ndate: 2025-10-17\n---\n\nAbout text.\n',
+        )
+
+        site = _build(sample_project)
+
+        # Index should exist (even if empty of posts)
+        assert (site / "about" / "index.html").exists()
+
+    def test_build_with_no_content(self, sample_project):
+        """Build succeeds with completely empty content directories."""
+        site = _build(sample_project)
+        # Should not crash
+        assert (site / "static" / "style.css").exists()
+
+    def test_build_with_only_drafts(self, sample_project):
+        """Build succeeds when all posts are drafts (no published output)."""
+        posts_dir = sample_project / "content" / "posts"
+        _write_post(
+            posts_dir,
+            "2025-10-17-draft.md",
+            '---\ntitle: "Only Draft"\ndate: 2025-10-17\ndraft: true\n---\n\nDraft.\n',
+        )
+
+        site = _build(sample_project)
+        assert not (site / "posts" / "only-draft" / "index.html").exists()
+        # Static assets still copied
+        assert (site / "static" / "style.css").exists()
