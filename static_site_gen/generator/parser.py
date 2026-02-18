@@ -310,9 +310,9 @@ def parse_content_file(
     except UnicodeDecodeError as e:
         raise ParseError(f"File encoding error: {e}", filepath) from e
     except Exception as e:
-        raise ParseError(
-            f"Failed to read file: {e}", filepath
-        ) from e  # Extract front matter and markdown body
+        raise ParseError(f"Failed to read file: {e}", filepath) from e
+
+    # Extract front matter and markdown body
     front_matter, markdown_body = extract_front_matter(raw_content, filepath)
 
     # Validate required fields

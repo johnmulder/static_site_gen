@@ -7,7 +7,7 @@
 - `static_site_gen/generator/core.py` - Main build engine and orchestration
 - `static_site_gen/generator/parser.py` - Content parsing and front matter validation
 - `static_site_gen/generator/renderer.py` - Jinja2 template rendering
-- `static_site_gen/generator/utils.py` - Utility functions for file operations
+- `static_site_gen/generator/output.py` - Output generation, URL routing, and file operations
 - `static_site_gen/cli.py` - Command-line interface
 
 ### Build Process Implementation
@@ -147,7 +147,7 @@ static_site_gen/
 │       ├── core.py              # Main build engine
 │       ├── parser.py            # Content parsing
 │       ├── renderer.py          # Template rendering
-│       └── utils.py             # Utility functions
+│       └── output.py            # Output generation and file operations
 ├── content/                     # Content source files
 │   ├── posts/                   # Blog posts (YYYY-MM-DD-slug.md)
 │   └── pages/                   # Static pages

@@ -53,7 +53,8 @@ def generate_post_url(slug: str) -> str:
     Returns:
         URL path in format: /posts/<slug>/
     """
-    return f"/posts/{slug}/"
+    encoded_slug = urllib.parse.quote(slug, safe="")
+    return f"/posts/{encoded_slug}/"
 
 
 def generate_tag_url(tag: str) -> str:
@@ -80,7 +81,8 @@ def generate_page_url(slug: str) -> str:
     Returns:
         URL path in format: /<slug>/
     """
-    return f"/{slug}/"
+    encoded_slug = urllib.parse.quote(slug, safe="")
+    return f"/{encoded_slug}/"
 
 
 def get_output_path(base_dir: Path, url_path: str) -> Path:

@@ -81,24 +81,6 @@ class TemplateRenderer:
         }
         return self.render_template("post.html", context)
 
-    def render_index(self, posts: list, site_config: Any) -> str:
-        """
-        Render homepage with list of posts using index.html template.
-
-        Args:
-            posts: List of post metadata dictionaries, sorted by date
-            site_config: Site-wide configuration data
-
-        Returns:
-            Rendered index HTML
-        """
-        context = {
-            "posts": posts,
-            "site": site_config,
-            "page_title": getattr(site_config, "site_name", "Blog"),
-        }
-        return self.render_template("index.html", context)
-
     def render_index_page(
         self, posts: list, site_config: Any, pagination: dict[str, Any]
     ) -> str:

@@ -189,7 +189,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
     build_parser.set_defaults(func=cmd_build)
 
-    # Init command (placeholder for future)
+    # Init command
     init_parser = subparsers.add_parser("init", help="Initialize new site project")
     init_parser.add_argument("project_name", help="Name of the new project")
     init_parser.set_defaults(func=cmd_init)

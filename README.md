@@ -178,7 +178,7 @@ Generates your complete site in the `site/` directory.
 python -m static_site_gen init
 ```
 
-*(Coming soon)* Creates a new site with sample content and templates.
+Creates a new site with sample content, templates, and configuration.
 
 ### Development Workflow
 

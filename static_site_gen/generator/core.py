@@ -5,7 +5,7 @@ This module contains the main build orchestration logic that coordinates
 the entire content -> template -> output pipeline.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -202,6 +202,46 @@ class SiteGenerator:
 
         return content_files
 
+    def _process_content_files(self, files: list[Path], label: str) -> list[Any]:
+        """
+        Parse content files with slug collision resolution.
+
+        Args:
+            files: List of Markdown file paths to process
+            label: Human-readable label for error messages (e.g. 'post', 'page')
+
+        Returns:
+            List of ParsedContent objects
+        """
+        assert self.config is not None
+
+        extensions = self.config.markdown_extensions
+        timezone = self.config.timezone
+        slugs: set[str] = set()
+        results: list[Any] = []
+
+        for filepath in files:
+            try:
+                parsed = parse_content_file(filepath, extensions, timezone)
+
+                original_slug = parsed.metadata.slug
+                final_slug = self._resolve_slug_collision(original_slug, slugs)
+
+                if final_slug != original_slug:
+                    print(
+                        f"Warning: {label.capitalize()} slug collision resolved "
+                        f"for '{parsed.metadata.title}': '{original_slug}' -> '{final_slug}'"
+                    )
+                    parsed.metadata = replace(parsed.metadata, slug=final_slug)
+
+                slugs.add(final_slug)
+                results.append(parsed)
+            except (ParseError, OSError, ValueError) as e:
+                print(f"Error processing {label} {filepath}: {e}")
+                continue
+
+        return results
+
     def process_content(self, content_files: dict[str, list[Path]]) -> dict[str, list]:
         """
         Parse and process all content files.
@@ -216,58 +256,10 @@ class SiteGenerator:
             self.config is not None
         ), "Configuration must be loaded before processing content"
 
-        processed_content: dict[str, list[Any]] = {"posts": [], "pages": []}
-
-        markdown_extensions = self.config.markdown_extensions
-        timezone = self.config.timezone
-
-        post_slugs: set[str] = set()
-        for post_file in content_files["posts"]:
-            try:
-                post_data = parse_content_file(post_file, markdown_extensions, timezone)
-
-                original_slug = post_data.metadata.slug
-                final_slug = self._resolve_slug_collision(original_slug, post_slugs)
-
-                if final_slug != original_slug:
-                    print(
-                        f"Warning: Slug collision resolved for '{post_data.metadata.title}': '{original_slug}' -> '{final_slug}'"
-                    )
-                    from dataclasses import replace
-
-                    # Preserve all original metadata, only changing the slug
-                    post_data.metadata = replace(post_data.metadata, slug=final_slug)
-
-                post_slugs.add(final_slug)
-                processed_content["posts"].append(post_data)
-            except (ParseError, OSError, ValueError) as e:
-                print(f"Error processing post {post_file}: {e}")
-                continue
-
-        page_slugs: set[str] = set()
-        for page_file in content_files["pages"]:
-            try:
-                page_data = parse_content_file(page_file, markdown_extensions, timezone)
-
-                original_slug = page_data.metadata.slug
-                final_slug = self._resolve_slug_collision(original_slug, page_slugs)
-
-                if final_slug != original_slug:
-                    print(
-                        f"Warning: Page slug collision resolved for '{page_data.metadata.title}': '{original_slug}' -> '{final_slug}'"
-                    )
-                    from dataclasses import replace
-
-                    # Preserve all original metadata, only changing the slug
-                    page_data.metadata = replace(page_data.metadata, slug=final_slug)
-
-                page_slugs.add(final_slug)
-                processed_content["pages"].append(page_data)
-            except (ParseError, OSError, ValueError) as e:
-                print(f"Error processing page {page_file}: {e}")
-                continue
-
-        return processed_content
+        return {
+            "posts": self._process_content_files(content_files["posts"], "post"),
+            "pages": self._process_content_files(content_files["pages"], "page"),
+        }
 
     def generate_posts(self, posts: list[Any]) -> None:
         """
@@ -326,7 +318,7 @@ class SiteGenerator:
                     page_dir.mkdir(parents=True, exist_ok=True)
                     output_path = page_dir / "index.html"
 
-                posts = page_info["posts"]
+                page_posts = page_info["posts"]
                 pagination = {
                     "current_page": page_info["page_number"],
                     "total_pages": page_info["total_pages"],
@@ -337,7 +329,7 @@ class SiteGenerator:
                 }
 
                 html_content = self.renderer.render_index_page(
-                    posts, self.config, pagination
+                    page_posts, self.config, pagination
                 )
                 write_file(output_path, html_content)
 
@@ -394,8 +386,6 @@ class SiteGenerator:
         ), "Configuration must be loaded before generating feed"
 
         try:
-            from .output import sort_posts_by_date
-
             posts_dict = [post.to_dict() for post in posts]
             sorted_posts = sort_posts_by_date(posts_dict)
 
