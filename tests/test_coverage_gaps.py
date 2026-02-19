@@ -4,7 +4,7 @@ Tests targeting uncovered code paths for coverage improvement.
 These tests cover guard clauses, error handling, edge cases, and validation
 paths that were not reached by existing tests.
 """
-
+# pylint: disable=protected-access,import-outside-toplevel,import-error
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -78,7 +78,11 @@ class TestCoreGuardClauses:
         with pytest.raises(RuntimeError, match="Configuration must be loaded"):
             generator.process_content({"posts": [], "pages": []})
 
-    def test_generate_posts_without_renderer(self, sample_project, sample_post_content):
+    def test_generate_posts_without_renderer(
+        self,
+        sample_project,
+        sample_post_content,  # noqa: ARG002
+    ):  # pylint: disable=unused-argument
         """generate_posts raises when renderer is not initialized."""
         generator = SiteGenerator(sample_project)
         generator.load_config()

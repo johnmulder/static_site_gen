@@ -6,6 +6,7 @@ functions used throughout the site generation process.
 """
 
 from datetime import datetime
+from typing import Any
 
 import pytest
 
@@ -131,7 +132,7 @@ class TestUtilityFunctions:
 
     def test_collect_posts_by_tag(self):
         """Test collecting posts by tags."""
-        posts = [
+        posts: list[dict[str, Any]] = [
             {"title": "Post 1", "tags": ["python", "web"]},
             {"title": "Post 2", "tags": ["python", "data"]},
             {"title": "Post 3", "tags": ["web"]},
@@ -176,7 +177,7 @@ class TestUtilityFunctions:
 
     def test_filter_published_posts(self):
         """Test filtering out draft posts."""
-        posts = [
+        posts: list[dict[str, Any]] = [
             {"title": "Published 1", "draft": False},
             {"title": "Draft 1", "draft": True},
             {"title": "Published 2"},  # No draft field (defaults to published)

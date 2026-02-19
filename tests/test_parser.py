@@ -217,7 +217,7 @@ class TestParseDate:
         filepath = tmp_path / "test.md"
 
         with pytest.raises(ParseError, match="Date must be string.*datetime.*or date"):
-            parse_date(123, filepath, timezone="UTC")
+            parse_date(123, filepath, timezone="UTC")  # type: ignore[arg-type]
 
 
 class TestGenerateSlug:

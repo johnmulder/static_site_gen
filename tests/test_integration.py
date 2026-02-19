@@ -5,7 +5,7 @@ Tests the complete build pipeline from content files to generated output,
 covering multi-post ordering, draft filtering, tag pages, RSS feed,
 static assets, and empty-site edge cases.
 """
-
+# pylint: disable=too-few-public-methods
 from pathlib import Path
 
 from static_site_gen.generator.core import SiteGenerator

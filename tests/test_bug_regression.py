@@ -327,6 +327,7 @@ Content 2
             assert post.metadata.date.year == 2025
             assert post.metadata.date.month == 10
             assert post.metadata.date.day == 30
+            assert post.metadata.tags is not None
             assert "test" in post.metadata.tags
             assert not post.metadata.draft
 
@@ -388,8 +389,10 @@ Content 2
 
         assert post1_data.metadata.title == "First Post"
         assert post1_data.metadata.description == "First post description"
+        assert post1_data.metadata.tags is not None
         assert "first" in post1_data.metadata.tags
 
         assert post2_data.metadata.title == "Second Post"
         assert post2_data.metadata.description == "Second post description"
+        assert post2_data.metadata.tags is not None
         assert "second" in post2_data.metadata.tags
