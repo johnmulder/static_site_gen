@@ -12,12 +12,16 @@ static_site_gen.egg-info/requires.txt
 static_site_gen.egg-info/top_level.txt
 static_site_gen/generator/__init__.py
 static_site_gen/generator/core.py
+static_site_gen/generator/output.py
 static_site_gen/generator/parser.py
 static_site_gen/generator/renderer.py
-static_site_gen/generator/utils.py
+tests/test_bug_regression.py
 tests/test_cli.py
 tests/test_core_edge_cases.py
+tests/test_coverage_gaps.py
 tests/test_integration.py
+tests/test_main.py
+tests/test_new_features.py
 tests/test_parser.py
 tests/test_renderer_edge_cases.py
 tests/test_security.py
