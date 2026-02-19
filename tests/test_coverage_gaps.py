@@ -4,6 +4,7 @@ Tests targeting uncovered code paths for coverage improvement.
 These tests cover guard clauses, error handling, edge cases, and validation
 paths that were not reached by existing tests.
 """
+
 # pylint: disable=protected-access,import-outside-toplevel,import-error
 from pathlib import Path
 from unittest.mock import Mock, patch

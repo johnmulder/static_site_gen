@@ -4,6 +4,7 @@ Shared test fixtures for the static site generator test suite.
 Provides reusable project scaffolding, sample content, and configuration
 so individual test files do not need to rebuild these from scratch.
 """
+
 # pylint: disable=redefined-outer-name
 import shutil
 from pathlib import Path
