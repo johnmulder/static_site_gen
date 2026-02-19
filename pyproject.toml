@@ -34,9 +34,11 @@ dev = [
     "black>=25.1,<26",
     "isort>=6.0,<7",
     "ruff>=0.9,<1",
+    "pylint>=3.0,<4",
     "mdformat>=0.7.22,<1",
     "mdformat-frontmatter>=2.0,<3",
     "mypy>=1.15,<2",
+    "pre-commit>=4.0,<5",
     "types-Markdown>=3.7,<4",
     "types-PyYAML>=6.0,<7",
 ]

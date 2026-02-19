@@ -36,6 +36,6 @@ repos:
         entry: mypy
         language: system
         types: [python]
-        files: "^static_site_gen/"
+        files: "^(static_site_gen|tests)/"
         pass_filenames: false
-        args: [static_site_gen/]
+        args: [static_site_gen/, tests/]

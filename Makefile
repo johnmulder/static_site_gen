@@ -3,10 +3,12 @@
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-lint: ## Run all linters (ruff, pylint, mypy)
+lint: ## Run all linters (ruff, black, isort, pylint, mypy)
 	ruff check static_site_gen/ tests/
+	black --check static_site_gen/ tests/
+	isort --check-only static_site_gen/ tests/
 	pylint static_site_gen/
-	mypy static_site_gen/
+	mypy static_site_gen/ tests/
 
 format: ## Auto-format code with ruff and black
 	ruff format static_site_gen/ tests/

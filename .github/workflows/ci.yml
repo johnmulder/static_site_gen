@@ -38,7 +38,7 @@ jobs:
         run: isort --check-only .
 
       - name: Mypy
-        run: mypy static_site_gen
+        run: mypy static_site_gen/ tests/
 
       - name: Pylint
         run: pylint static_site_gen/
