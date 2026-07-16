@@ -14,8 +14,6 @@ from static_site_gen.generator.output import (
     clean_output_dir,
     collect_posts_by_tag,
     copy_static_files,
-    ensure_dir,
-    filter_published_posts,
     generate_page_url,
     generate_pagination_url,
     generate_post_url,
@@ -28,26 +26,6 @@ from static_site_gen.generator.output import (
 
 class TestUtilityFunctions:
     """Test utility functions."""
-
-    def test_ensure_dir_creates_directory(self, tmp_path):
-        """Test that ensure_dir creates directories."""
-        test_dir = tmp_path / "test" / "nested" / "dir"
-        assert not test_dir.exists()
-
-        ensure_dir(test_dir)
-
-        assert test_dir.exists()
-        assert test_dir.is_dir()
-
-    def test_ensure_dir_handles_existing_directory(self, tmp_path):
-        """Test that ensure_dir works with existing directories."""
-        test_dir = tmp_path / "existing"
-        test_dir.mkdir()
-
-        # Should not raise an error
-        ensure_dir(test_dir)
-
-        assert test_dir.exists()
 
     def test_copy_static_files_success(self, tmp_path):
         """Test successful static file copying."""
@@ -174,21 +152,6 @@ class TestUtilityFunctions:
         assert result[0]["title"] == "Old"
         assert result[1]["title"] == "Middle"
         assert result[2]["title"] == "New"
-
-    def test_filter_published_posts(self):
-        """Test filtering out draft posts."""
-        posts: list[dict[str, Any]] = [
-            {"title": "Published 1", "draft": False},
-            {"title": "Draft 1", "draft": True},
-            {"title": "Published 2"},  # No draft field (defaults to published)
-            {"title": "Draft 2", "draft": True},
-        ]
-
-        result = filter_published_posts(posts)
-
-        assert len(result) == 2
-        assert result[0]["title"] == "Published 1"
-        assert result[1]["title"] == "Published 2"
 
     def test_clean_output_dir_with_existing_dir(self, tmp_path):
         """Test cleaning existing output directory."""

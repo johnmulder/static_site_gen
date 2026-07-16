@@ -227,12 +227,3 @@ class TemplateRenderer:
             "site": site_config,
         }
         return self.render_template("sitemap.xml", context)
-
-    def get_available_templates(self) -> list[str]:
-        """
-        Get list of available template files.
-
-        Returns:
-            List of template filenames in template directory
-        """
-        return [f.name for f in self.template_dir.iterdir() if f.is_file()]

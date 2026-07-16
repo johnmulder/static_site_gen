@@ -256,16 +256,6 @@ class TestParserCoverage:
 class TestRendererCoverage:
     """Cover renderer edge cases."""
 
-    def test_get_available_templates(self):
-        """get_available_templates lists template files."""
-        from tests.conftest import PROJECT_ROOT
-
-        renderer = TemplateRenderer(PROJECT_ROOT / "templates")
-        templates = renderer.get_available_templates()
-        assert "base.html" in templates
-        assert "post.html" in templates
-        assert "sitemap.xml" in templates
-
     def test_render_index_page_with_pagination(self):
         """Index page title includes page number for page > 1."""
         from static_site_gen.generator.core import SiteConfig

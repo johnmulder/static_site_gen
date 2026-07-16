@@ -13,16 +13,6 @@ from pathlib import Path
 from typing import Any
 
 
-def ensure_dir(path: Path) -> None:
-    """
-    Create directory and any necessary parent directories.
-
-    Args:
-        path: Directory path to create
-    """
-    path.mkdir(parents=True, exist_ok=True)
-
-
 def copy_static_files(source_dir: Path, dest_dir: Path) -> None:
     """
     Copy all files from source directory to destination directory.
@@ -141,7 +131,7 @@ def write_file(path: Path, content: str) -> None:
         path: File path to write to
         content: Content to write
     """
-    ensure_dir(path.parent)
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
 
 
@@ -181,19 +171,6 @@ def sort_posts_by_date(
         Sorted list of posts
     """
     return sorted(posts, key=lambda p: p["date"], reverse=reverse)
-
-
-def filter_published_posts(posts: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """
-    Filter out draft posts.
-
-    Args:
-        posts: List of post dictionaries
-
-    Returns:
-        List of published posts (draft=False or missing draft field)
-    """
-    return [post for post in posts if not post.get("draft", False)]
 
 
 def clean_output_dir(output_dir: Path) -> None:
