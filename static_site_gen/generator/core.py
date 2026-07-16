@@ -303,7 +303,15 @@ class SiteGenerator:
 
         for post in posts:
             try:
-                html_content = self.renderer.render_post(post.to_dict(), self.config)
+                post_data = post.to_dict()
+                html_content = self.renderer.render_template(
+                    "post.html",
+                    {
+                        "post": post_data,
+                        "site": self.config,
+                        "page_title": post_data.get("title", "Untitled Post"),
+                    },
+                )
                 url_path = generate_post_url(post.metadata.slug)
                 output_path = get_output_path(self.output_dir, url_path)
                 write_file(output_path, html_content)
@@ -355,8 +363,17 @@ class SiteGenerator:
                     "next_url": page_info["next_url"],
                 }
 
-                html_content = self.renderer.render_index_page(
-                    page_posts, self.config, pagination
+                page_title = self.config.site_name
+                if pagination["current_page"] > 1:
+                    page_title += f" - Page {pagination['current_page']}"
+                html_content = self.renderer.render_template(
+                    "index.html",
+                    {
+                        "posts": page_posts,
+                        "site": self.config,
+                        "pagination": pagination,
+                        "page_title": page_title,
+                    },
                 )
                 write_file(output_path, html_content)
 
@@ -384,8 +401,14 @@ class SiteGenerator:
             try:
                 sorted_posts = sort_posts_by_date(tag_posts)
 
-                html_content = self.renderer.render_tag_page(
-                    tag, sorted_posts, self.config
+                html_content = self.renderer.render_template(
+                    "tag.html",
+                    {
+                        "tag": tag,
+                        "posts": sorted_posts,
+                        "site": self.config,
+                        "page_title": f"Posts tagged '{tag}'",
+                    },
                 )
 
                 url_path = generate_tag_url(tag)
@@ -416,7 +439,14 @@ class SiteGenerator:
         )
 
         try:
-            html_content = self.renderer.render_tag_index(tags_with_counts, self.config)
+            html_content = self.renderer.render_template(
+                "tag_index.html",
+                {
+                    "tags": tags_with_counts,
+                    "site": self.config,
+                    "page_title": "Tags",
+                },
+            )
             output_path = self.output_dir / "tag" / "index.html"
             write_file(output_path, html_content)
         except (OSError, ValueError) as e:
@@ -438,7 +468,9 @@ class SiteGenerator:
             posts_dict = [post.to_dict() for post in posts]
             sorted_posts = sort_posts_by_date(posts_dict)
 
-            xml_content = self.renderer.render_feed(sorted_posts, self.config)
+            xml_content = self.renderer.render_template(
+                "feed.xml", {"posts": sorted_posts, "site": self.config}
+            )
             feed_path = self.output_dir / "feed.xml"
             write_file(feed_path, xml_content)
         except (OSError, ValueError) as e:
@@ -466,8 +498,14 @@ class SiteGenerator:
             pages_dict = [page.to_dict() for page in pages]
             all_tags = list(collect_posts_by_tag(posts_dict).keys())
 
-            xml_content = self.renderer.render_sitemap(
-                posts_dict, pages_dict, all_tags, self.config
+            xml_content = self.renderer.render_template(
+                "sitemap.xml",
+                {
+                    "posts": posts_dict,
+                    "pages": pages_dict,
+                    "tags": sorted(all_tags),
+                    "site": self.config,
+                },
             )
             sitemap_path = self.output_dir / "sitemap.xml"
             write_file(sitemap_path, xml_content)
@@ -488,7 +526,15 @@ class SiteGenerator:
 
         for page in pages:
             try:
-                html_content = self.renderer.render_page(page.to_dict(), self.config)
+                page_data = page.to_dict()
+                html_content = self.renderer.render_template(
+                    "page.html",
+                    {
+                        "page": page_data,
+                        "site": self.config,
+                        "page_title": page_data.get("title", "Untitled Page"),
+                    },
+                )
 
                 url_path = generate_page_url(page.metadata.slug)
                 output_path = get_output_path(self.output_dir, url_path)

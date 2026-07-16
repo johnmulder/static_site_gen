@@ -256,29 +256,6 @@ class TestParserCoverage:
 class TestRendererCoverage:
     """Cover renderer edge cases."""
 
-    def test_render_index_page_with_pagination(self):
-        """Index page title includes page number for page > 1."""
-        from static_site_gen.generator.core import SiteConfig
-        from tests.conftest import PROJECT_ROOT
-
-        renderer = TemplateRenderer(PROJECT_ROOT / "templates")
-        config = SiteConfig(
-            site_name="Test",
-            base_url="https://example.com",
-            author="Test",
-        )
-        pagination = {
-            "current_page": 2,
-            "total_pages": 3,
-            "has_previous": True,
-            "has_next": True,
-            "previous_url": "/",
-            "next_url": "/page/3/",
-        }
-
-        html = renderer.render_index_page([], config, pagination)
-        assert "Page 2" in html
-
 
 # ── Core error-handling paths ─────────────────────────────────────────────
 
@@ -302,9 +279,10 @@ class TestCoreErrorHandling:
         # Parse real content
         posts = generator._process_content_files(list(posts_dir.glob("*.md")), "post")
 
-        # Patch renderer to raise on render_post
         with patch.object(
-            generator.renderer, "render_post", side_effect=ValueError("bad template")
+            generator.renderer,
+            "render_template",
+            side_effect=ValueError("bad template"),
         ):
             # Should not raise -- error is logged, post is skipped
             generator.generate_posts(posts)
@@ -326,7 +304,7 @@ class TestCoreErrorHandling:
 
         with patch.object(
             generator.renderer,
-            "render_tag_page",
+            "render_template",
             side_effect=ValueError("bad template"),
         ):
             generator.generate_tag_pages(posts)
@@ -347,7 +325,9 @@ class TestCoreErrorHandling:
         pages = generator._process_content_files(list(pages_dir.glob("*.md")), "page")
 
         with patch.object(
-            generator.renderer, "render_page", side_effect=ValueError("bad template")
+            generator.renderer,
+            "render_template",
+            side_effect=ValueError("bad template"),
         ):
             generator.generate_pages(pages)
 
@@ -365,7 +345,9 @@ class TestCoreErrorHandling:
         posts = generator._process_content_files(list(posts_dir.glob("*.md")), "post")
 
         with patch.object(
-            generator.renderer, "render_feed", side_effect=ValueError("bad template")
+            generator.renderer,
+            "render_template",
+            side_effect=ValueError("bad template"),
         ):
             # Should not raise -- error is logged
             generator.generate_feed(posts)
@@ -387,7 +369,7 @@ class TestCoreErrorHandling:
 
         with patch.object(
             generator.renderer,
-            "render_tag_index",
+            "render_template",
             side_effect=ValueError("bad template"),
         ):
             generator.generate_tag_index(posts)
@@ -409,7 +391,7 @@ class TestCoreErrorHandling:
 
         with patch.object(
             generator.renderer,
-            "render_sitemap",
+            "render_template",
             side_effect=ValueError("bad template"),
         ):
             generator.generate_sitemap(posts, [])
@@ -431,7 +413,7 @@ class TestCoreErrorHandling:
 
         with patch.object(
             generator.renderer,
-            "render_index_page",
+            "render_template",
             side_effect=ValueError("bad template"),
         ):
             with pytest.raises(ValueError, match="bad template"):
