@@ -3,17 +3,14 @@
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-lint: ## Run all linters (ruff, black, isort, pylint, mypy)
+lint: ## Run linting and type checks
 	ruff check static_site_gen/ tests/
-	black --check static_site_gen/ tests/
-	isort --check-only static_site_gen/ tests/
-	pylint static_site_gen/
+	ruff format --check static_site_gen/ tests/
 	mypy static_site_gen/ tests/
 
-format: ## Auto-format code with ruff and black
+format: ## Format code with Ruff
 	ruff format static_site_gen/ tests/
 	ruff check --fix static_site_gen/ tests/
-	black static_site_gen/ tests/
 
 test: ## Run test suite
 	pytest

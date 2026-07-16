@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class SiteConfig:  # pylint: disable=too-many-instance-attributes
+class SiteConfig:
     """
     Validated site configuration.
 

@@ -5,7 +5,6 @@ These tests target specific uncovered areas in the build process,
 configuration loading, and error handling scenarios.
 """
 
-# pylint: disable=protected-access
 from unittest.mock import Mock
 
 import pytest

@@ -15,11 +15,6 @@ repos:
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
 
-  - repo: https://github.com/psf/black
-    rev: 23.11.0
-    hooks:
-      - id: black
-
   - repo: https://github.com/executablebooks/mdformat
     rev: 0.7.17
     hooks:
@@ -28,14 +23,3 @@ repos:
           - mdformat-gfm
           - mdformat-frontmatter
         exclude: "^content/"
-
-  - repo: local
-    hooks:
-      - id: mypy
-        name: mypy
-        entry: mypy
-        language: system
-        types: [python]
-        files: "^(static_site_gen|tests)/"
-        pass_filenames: false
-        args: [static_site_gen/, tests/]

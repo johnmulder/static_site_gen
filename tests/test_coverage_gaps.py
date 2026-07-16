@@ -5,7 +5,6 @@ These tests cover guard clauses, error handling, edge cases, and validation
 paths that were not reached by existing tests.
 """
 
-# pylint: disable=protected-access,import-outside-toplevel,import-error
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -83,7 +82,7 @@ class TestCoreGuardClauses:
         self,
         sample_project,
         sample_post_content,  # noqa: ARG002
-    ):  # pylint: disable=unused-argument
+    ):
         """generate_posts raises when renderer is not initialized."""
         generator = SiteGenerator(sample_project)
         generator.load_config()
@@ -464,9 +463,9 @@ class TestCoreErrorHandling:
         posts_dir = sample_project / "content" / "posts"
         for i in range(3):
             content = (
-                f"---\ntitle: Post {i}\ndate: 2025-01-0{i+1}\n---\n\nContent {i}\n"
+                f"---\ntitle: Post {i}\ndate: 2025-01-0{i + 1}\n---\n\nContent {i}\n"
             )
-            (posts_dir / f"2025-01-0{i+1}-post-{i}.md").write_text(content)
+            (posts_dir / f"2025-01-0{i + 1}-post-{i}.md").write_text(content)
 
         generator = SiteGenerator(sample_project)
         generator.build()

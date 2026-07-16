@@ -5,7 +5,6 @@ Provides reusable project scaffolding, sample content, and configuration
 so individual test files do not need to rebuild these from scratch.
 """
 
-# pylint: disable=redefined-outer-name
 import shutil
 from pathlib import Path
 
@@ -38,7 +37,7 @@ def sample_project(tmp_path, sample_config):
     Includes config, templates (copied from real project), content dirs,
     and static dir. Returns the project root path.
     """
-    import yaml  # pylint: disable=import-outside-toplevel
+    import yaml
 
     # Config
     (tmp_path / "config.yaml").write_text(yaml.dump(sample_config))

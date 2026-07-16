@@ -87,11 +87,8 @@ pytest tests/test_parser.py
 ### Code Quality
 
 ```bash
-# Format code
-black --check .
-isort --check-only .
-
-# Lint code
+# Check formatting and lint code
+ruff format --check .
 ruff check .
 
 # Type checking
@@ -111,8 +108,7 @@ pytest
 
 # 2) Quality checks
 ruff check .
-black --check .
-isort --check-only .
+ruff format --check .
 mypy static_site_gen
 
 # 3) Pre-commit hooks
@@ -157,7 +153,7 @@ static_site_gen/
 ├── tests/                       # Test suite
 ├── config.yaml                  # Site configuration
 ├── pyproject.toml              # Python project configuration
-└── requirements.txt            # Production dependencies
+└── pyproject.toml              # Package and dependency configuration
 ```
 
 ## Configuration Options
@@ -218,7 +214,7 @@ Error in content/posts/my-post.md: Missing required field 'date'
 1. Make your changes
 1. Add tests for new functionality
 1. Ensure all tests pass (`pytest`)
-1. Run code quality checks (`black --check .`, `ruff check .`, `isort --check-only .`, `mypy static_site_gen`)
+1. Run code quality checks (`ruff check .`, `ruff format --check .`, `mypy static_site_gen`)
 1. Commit your changes (`git commit -m 'Add amazing feature'`)
 1. Push to the branch (`git push origin feature/amazing-feature`)
 1. Open a Pull Request

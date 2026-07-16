@@ -218,7 +218,7 @@ your-blog/
 │   └── style.css           # Your styles
 ├── site/                    # Generated site (auto-created)
 ├── config.yaml             # Site configuration
-└── requirements.txt        # Python dependencies
+└── pyproject.toml          # Package and dependency configuration
 ```
 
 ## Requirements
@@ -230,8 +230,7 @@ your-blog/
 
 ```bash
 ruff check .
-black --check .
-isort --check-only .
+ruff format --check .
 mypy static_site_gen
 pytest --cov=static_site_gen --cov-report=term-missing
 ```

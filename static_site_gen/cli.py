@@ -113,8 +113,8 @@ def cmd_serve(args: argparse.Namespace) -> int:
         args: Parsed command-line arguments (expects ``project_dir``, ``port``)
     """
     # Lazy imports -- http.server is only needed for the serve command
-    import functools  # pylint: disable=import-outside-toplevel
-    import http.server  # pylint: disable=import-outside-toplevel
+    import functools
+    import http.server
 
     project_root = Path(args.project_dir).resolve()
     site_dir = project_root / "site"
