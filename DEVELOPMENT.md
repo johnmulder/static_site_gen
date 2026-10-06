@@ -24,6 +24,9 @@
 1. **Index Generation**: Build homepage from sorted post list
 1. **Tag Pages**: Generate `/tag/<tag>/` pages from tag index
 1. **Static Assets**: Copy `static/` to `site/static/`
+1. **Publication**: Generate in a sibling temporary directory, then replace the
+   previous output after rendering and writes succeed. Reject output paths that
+   overlap source inputs before creating the staging directory.
 
 ### Template System
 
@@ -194,6 +197,8 @@ markdown_extensions:              # Additional Markdown extensions
 - Missing or invalid `config.yaml`
 - Template directory not found
 - Invalid YAML front matter syntax
+- Template rendering or output write failures (the previous generated site is
+  preserved)
 
 ### Graceful Handling
 

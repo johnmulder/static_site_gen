@@ -51,6 +51,9 @@ Issues = "https://github.com/johnmulder/static_site_gen/issues"
 [tool.setuptools.packages.find]
 include = ["static_site_gen*"]
 
+[tool.setuptools.package-data]
+"static_site_gen.resources" = ["templates/*.html", "templates/*.xml"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"

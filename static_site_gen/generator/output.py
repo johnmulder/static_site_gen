@@ -7,6 +7,7 @@ organizing posts for pagination and tag archives.
 """
 
 import shutil
+import tempfile
 import urllib.parse
 from collections import defaultdict
 from pathlib import Path
@@ -201,6 +202,51 @@ def clean_output_dir(output_dir: Path) -> None:
     if output_dir.exists():
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True)
+
+
+def validate_output_dir(output_dir: Path, project_root: Path) -> Path:
+    """Require a dedicated output directory within the project, outside its inputs."""
+    root = project_root.resolve()
+    output = output_dir.resolve()
+    if output == root or not output.is_relative_to(root):
+        raise ValueError("output_dir must be a directory inside the project root")
+
+    inputs = [
+        root / name
+        for name in ("content", "templates", "static", "config.yaml", ".git")
+    ]
+    package_source = Path(__file__).resolve().parents[1]
+    if package_source.is_relative_to(root):
+        inputs.append(package_source)
+    for source in inputs:
+        source = source.resolve()
+        if output.is_relative_to(source) or source.is_relative_to(output):
+            raise ValueError(f"output_dir overlaps a project input: {source}")
+    if output.exists() and not output.is_dir():
+        raise ValueError("output_dir must be a directory")
+    return output
+
+
+def publish_output(staged: Path, output: Path) -> None:
+    """Publish a completed build, restoring existing output if the swap fails."""
+    if not output.exists():
+        staged.replace(output)
+        return
+
+    backup = Path(
+        tempfile.mkdtemp(prefix=f".{output.name}-previous-", dir=output.parent)
+    )
+    backup.rmdir()
+    output.replace(backup)
+    try:
+        staged.replace(output)
+    except OSError:
+        try:
+            backup.replace(output)
+        except OSError as exc:
+            raise RuntimeError(f"Previous site remains available at {backup}") from exc
+        raise
+    shutil.rmtree(backup)
 
 
 def paginate_posts(

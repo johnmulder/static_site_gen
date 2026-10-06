@@ -6,6 +6,7 @@ the entire content -> template -> output pipeline.
 """
 
 import logging
+import tempfile
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from urllib.parse import urlparse
@@ -14,7 +15,6 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import yaml
 
 from .output import (
-    clean_output_dir,
     collect_posts_by_tag,
     copy_static_files,
     generate_page_url,
@@ -22,7 +22,9 @@ from .output import (
     generate_tag_url,
     get_output_path,
     paginate_posts,
+    publish_output,
     sort_posts_by_date,
+    validate_output_dir,
     write_file,
 )
 from .parser import ParsedContent, ParseError, parse_content_file
@@ -114,12 +116,18 @@ class SiteConfig:
         except ZoneInfoNotFoundError as exc:
             raise ValueError(f"Invalid timezone setting: {timezone}") from exc
 
+        output_dir = raw.get("output_dir", "site")
+        if not isinstance(output_dir, str) or not output_dir.strip():
+            raise ValueError("output_dir must be a nonempty relative directory name")
+        if Path(output_dir).is_absolute():
+            raise ValueError("output_dir must be relative to the project root")
+
         return cls(
             site_name=raw["site_name"],
             base_url=raw["base_url"],
             author=raw["author"],
             timezone=timezone,
-            output_dir=raw.get("output_dir", "site"),
+            output_dir=output_dir,
             posts_per_page=posts_per_page,
             description=raw.get("description", ""),
             keywords=raw.get("keywords", []),
@@ -322,7 +330,7 @@ class SiteGenerator:
                     post.metadata.slug,
                     e,
                 )
-                continue
+                raise
 
     def generate_index(self, posts: list[ParsedContent]) -> None:
         """
@@ -417,7 +425,7 @@ class SiteGenerator:
                 write_file(output_path, html_content)
             except (OSError, ValueError) as e:
                 logger.error("Error generating tag page for '%s': %s", tag, e)
-                continue
+                raise
 
     def generate_tag_index(self, posts: list[ParsedContent]) -> None:
         """
@@ -451,6 +459,7 @@ class SiteGenerator:
             write_file(output_path, html_content)
         except (OSError, ValueError) as e:
             logger.error("Error generating tag index: %s", e)
+            raise
 
     def generate_feed(self, posts: list[ParsedContent]) -> None:
         """
@@ -475,6 +484,7 @@ class SiteGenerator:
             write_file(feed_path, xml_content)
         except (OSError, ValueError) as e:
             logger.error("Error generating RSS feed: %s", e)
+            raise
 
     def generate_sitemap(
         self,
@@ -511,6 +521,7 @@ class SiteGenerator:
             write_file(sitemap_path, xml_content)
         except (OSError, ValueError) as e:
             logger.error("Error generating sitemap: %s", e)
+            raise
 
     def generate_pages(self, pages: list[ParsedContent]) -> None:
         """
@@ -547,7 +558,7 @@ class SiteGenerator:
                     page.metadata.slug,
                     e,
                 )
-                continue
+                raise
 
     def copy_assets(self) -> None:
         """
@@ -575,13 +586,28 @@ class SiteGenerator:
         if self.config is None:
             raise RuntimeError("Configuration failed to load")
 
-        self.output_dir = self.project_root / self.config.output_dir
+        output = validate_output_dir(
+            self.project_root / self.config.output_dir, self.project_root
+        )
 
         logger.info("Initializing template renderer...")
         self.renderer = TemplateRenderer(self.template_dir)
 
-        logger.info("Cleaning output directory...")
-        clean_output_dir(self.output_dir)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with tempfile.TemporaryDirectory(
+                prefix=f".{output.name}-build-", dir=output.parent
+            ) as staging:
+                self.output_dir = Path(staging)
+                self._generate_site(include_drafts)
+                validate_output_dir(output, self.project_root)
+                publish_output(self.output_dir, output)
+        finally:
+            self.output_dir = output
+        logger.info("Site build complete! Generated site in: %s", self.output_dir)
+
+    def _generate_site(self, include_drafts: bool) -> None:
+        """Generate the complete site in the staging directory."""
         logger.info("Discovering content files...")
         content_files = self.discover_content()
         logger.info(
@@ -636,5 +662,3 @@ class SiteGenerator:
         # Copy static assets
         logger.info("Copying static assets...")
         self.copy_assets()
-
-        logger.info("Site build complete! Generated site in: %s", self.output_dir)

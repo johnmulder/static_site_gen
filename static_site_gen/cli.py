@@ -6,15 +6,15 @@ This module provides the CLI commands for building and managing static sites.
 
 import argparse
 import logging
-import shutil
 import sys
 from collections.abc import Callable
 from datetime import date
+from importlib import resources
 from pathlib import Path
 from typing import cast
 
 import yaml
-from jinja2 import TemplateNotFound
+from jinja2 import TemplateError
 
 from .generator.core import SiteGenerator
 
@@ -98,7 +98,7 @@ def cmd_build(args: argparse.Namespace) -> int:
     except ValueError as e:
         print(f"Configuration error: {e}")
         return 1
-    except (OSError, RuntimeError, yaml.YAMLError, TemplateNotFound) as e:
+    except (OSError, RuntimeError, yaml.YAMLError, TemplateError) as e:
         print(f"Build failed: {e}")
         return 1
 
@@ -141,9 +141,8 @@ def cmd_init(args: argparse.Namespace) -> int:
     """
     Scaffold a new static site project.
 
-    Creates the directory structure, default templates (copied from the
-    package's own templates/ directory when available, otherwise skipped),
-    sample content, configuration, and a minimal stylesheet.
+    Creates the directory structure, packaged templates, sample content,
+    configuration, and a minimal stylesheet.
 
     Args:
         args: Parsed command-line arguments (expects ``project_name``)
@@ -182,14 +181,14 @@ def cmd_init(args: argparse.Namespace) -> int:
         # Stylesheet
         (project_dir / "static" / "style.css").write_text(_DEFAULT_STYLE)
 
-        # Copy real templates from the package's sibling templates/ directory
-        # (works when running from a source checkout or editable install).
-        package_root = Path(__file__).resolve().parent.parent
-        source_templates = package_root / "templates"
-        if source_templates.is_dir():
-            for src in source_templates.iterdir():
-                if src.is_file():
-                    shutil.copy(src, project_dir / "templates" / src.name)
+        source_templates = resources.files("static_site_gen.resources").joinpath(
+            "templates"
+        )
+        for template in source_templates.iterdir():
+            if template.is_file():
+                (project_dir / "templates" / template.name).write_text(
+                    template.read_text(encoding="utf-8"), encoding="utf-8"
+                )
 
         print(f"Created new site project in '{args.project_name}'")
         print(f"  {project_dir}/")

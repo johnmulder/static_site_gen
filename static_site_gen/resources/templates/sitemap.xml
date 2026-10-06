@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>{{ site.base_url }}/</loc>
+    </url>
+    {% for post in posts %}
+    <url>
+        <loc>{{ site.base_url }}/posts/{{ post.slug }}/</loc>
+        <lastmod>{{ post.date.strftime('%Y-%m-%d') }}</lastmod>
+    </url>
+    {% endfor %}
+    {% for page in pages %}
+    <url>
+        <loc>{{ site.base_url }}/{{ page.slug }}/</loc>
+    </url>
+    {% endfor %}
+    {% for tag in tags %}
+    <url>
+        <loc>{{ site.base_url }}/tag/{{ tag }}/</loc>
+    </url>
+    {% endfor %}
+</urlset>

@@ -266,7 +266,7 @@ class TestCoreErrorHandling:
     def test_generate_posts_logs_render_error(
         self, sample_project, sample_post_content
     ):
-        """generate_posts logs error and continues when rendering fails."""
+        """generate_posts logs and propagates rendering failure."""
         posts_dir = sample_project / "content" / "posts"
         (posts_dir / "2025-01-01-post.md").write_text(sample_post_content)
 
@@ -284,13 +284,14 @@ class TestCoreErrorHandling:
             "render_template",
             side_effect=ValueError("bad template"),
         ):
-            # Should not raise -- error is logged, post is skipped
-            generator.generate_posts(posts)
+            # Failure must propagate so the build cannot publish incomplete output.
+            with pytest.raises(ValueError, match="bad template"):
+                generator.generate_posts(posts)
 
     def test_generate_tag_pages_logs_render_error(
         self, sample_project, sample_post_content
     ):
-        """generate_tag_pages logs error and continues for individual tags."""
+        """generate_tag_pages logs and propagates tag rendering failure."""
         posts_dir = sample_project / "content" / "posts"
         (posts_dir / "2025-01-01-post.md").write_text(sample_post_content)
 
@@ -307,12 +308,13 @@ class TestCoreErrorHandling:
             "render_template",
             side_effect=ValueError("bad template"),
         ):
-            generator.generate_tag_pages(posts)
+            with pytest.raises(ValueError, match="bad template"):
+                generator.generate_tag_pages(posts)
 
     def test_generate_pages_logs_render_error(
         self, sample_project, sample_page_content
     ):
-        """generate_pages logs error and continues for individual pages."""
+        """generate_pages logs and propagates page rendering failure."""
         pages_dir = sample_project / "content" / "pages"
         (pages_dir / "about.md").write_text(sample_page_content)
 
@@ -329,7 +331,8 @@ class TestCoreErrorHandling:
             "render_template",
             side_effect=ValueError("bad template"),
         ):
-            generator.generate_pages(pages)
+            with pytest.raises(ValueError, match="bad template"):
+                generator.generate_pages(pages)
 
     def test_generate_feed_logs_render_error(self, sample_project, sample_post_content):
         """generate_feed logs error when rendering fails."""
@@ -349,8 +352,9 @@ class TestCoreErrorHandling:
             "render_template",
             side_effect=ValueError("bad template"),
         ):
-            # Should not raise -- error is logged
-            generator.generate_feed(posts)
+            # Failure must propagate to the build command.
+            with pytest.raises(ValueError, match="bad template"):
+                generator.generate_feed(posts)
 
     def test_generate_tag_index_logs_render_error(
         self, sample_project, sample_post_content
@@ -372,7 +376,8 @@ class TestCoreErrorHandling:
             "render_template",
             side_effect=ValueError("bad template"),
         ):
-            generator.generate_tag_index(posts)
+            with pytest.raises(ValueError, match="bad template"):
+                generator.generate_tag_index(posts)
 
     def test_generate_sitemap_logs_render_error(
         self, sample_project, sample_post_content
@@ -394,7 +399,8 @@ class TestCoreErrorHandling:
             "render_template",
             side_effect=ValueError("bad template"),
         ):
-            generator.generate_sitemap(posts, [])
+            with pytest.raises(ValueError, match="bad template"):
+                generator.generate_sitemap(posts, [])
 
     def test_generate_index_logs_render_error(
         self, sample_project, sample_post_content

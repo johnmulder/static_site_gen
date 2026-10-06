@@ -172,6 +172,15 @@ python -m static_site_gen build
 
 Generates your complete site in the `site/` directory.
 
+`output_dir` may select a dedicated directory inside the project. The build rejects
+the project root, paths outside it, and paths overlapping content, templates,
+static assets, configuration, Git metadata, or this package's source. These checks
+use resolved paths, including symlink targets.
+
+Generation happens in a temporary sibling directory. A rendering or write failure
+returns a nonzero status and preserves the previous site. A successful build
+replaces the output directory, removing obsolete generated files.
+
 ### Initialize New Project
 
 ```bash

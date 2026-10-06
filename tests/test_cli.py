@@ -64,6 +64,7 @@ author: "Test Author"
 """
             )
 
+            (temp_path / "templates" / "sitemap.xml").write_text("<urlset/>")
             with (
                 patch("sys.argv", ["cli.py", "build"]),
                 patch("os.getcwd", return_value=str(temp_path)),
@@ -130,6 +131,7 @@ author: "Test Author"
 """
             )
 
+            (temp_path / "templates" / "sitemap.xml").write_text("<urlset/>")
             args = Mock()
             args.project_dir = str(temp_path)
 
