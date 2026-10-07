@@ -244,4 +244,15 @@ mypy static_site_gen
 pytest --cov=static_site_gen --cov-report=term-missing
 ```
 
+CI also builds both distributions and checks each in its own fresh environment
+on Python 3.12, 3.13, and 3.14. The installed CLI must scaffold and build a sample
+site with its packaged templates, pages, tag archives, feed, sitemap, and CSS.
+To run the same artifact check after installing the build tool:
+
+```bash
+python -m pip install build
+python -m build
+python scripts/check_installed_artifacts.py dist/*.whl dist/*.tar.gz
+```
+
 For detailed development information, see [DEVELOPMENT.md](DEVELOPMENT.md).
