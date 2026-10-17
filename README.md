@@ -1,258 +1,126 @@
 # Static Site Generator
 
-A minimal Python-based static site generator that converts Markdown files with YAML front matter into a clean, fast HTML blog.
+A small Python static blog generator for locally authored Markdown with YAML front matter. It provides Jinja2 templates, clean URLs, tags, pagination, RSS, a sitemap, and copied static assets.
 
-## Features
+The first alpha is `0.1.0a1`, for Python 3.12-3.14 on Linux and macOS. Windows is unverified. This alpha supports hosting at a domain root; URL prefixes such as `/blog/` are unsupported.
 
-- **Simple Content Management**: Write posts in Markdown with YAML front matter
-- **Clean URLs**: SEO-friendly URLs like `/posts/my-post/` instead of `/posts/my-post.html`
-- **Tag System**: Automatic tag pages for organizing content
-- **Template System**: Customizable Jinja2 templates with inheritance
-- **Fast Builds**: Efficient processing of content and assets
-- **Static Assets**: Automatic copying of CSS, images, and other static files
+## Install the alpha
 
-## Quick Start
-
-### Installation
+Release readiness creates an unpublished draft. The download below becomes available after `v0.1.0a1` is published. It requires the [GitHub CLI](https://cli.github.com/).
 
 ```bash
-# Clone the repository
-git clone https://github.com/johnmulder/static_site_gen.git
-cd static_site_gen
-
-# Create a virtual environment (recommended)
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate
 
-# Install dependencies
-pip install -e .
-
-# Optional: install development tools
-pip install -e '.[dev]'
+gh release download v0.1.0a1 --repo johnmulder/static_site_gen --pattern '*.whl'
+python -m pip install ./static_site_gen-0.1.0a1-py3-none-any.whl
 ```
 
-### Create Your First Post
-
-1. **Create a post** in `content/posts/`:
+For a locally prepared candidate, install the same wheel from the retained bundle instead:
 
 ```bash
-# content/posts/2025-10-30-my-first-post.md
----
-title: "My First Blog Post"
-date: 2025-10-30
-tags: [blog, welcome]
-description: "Welcome to my new blog built with a static site generator"
----
-
-# Welcome to My Blog
-
-This is my first post using the static site generator!
-
-## Features I Love
-
-- Simple Markdown writing
-- Clean URLs
-- Fast loading pages
+python -m pip install ./dist/release/0.1.0a1/static_site_gen-0.1.0a1-py3-none-any.whl
 ```
 
-1. **Configure your site** in `config.yaml`:
-
-```yaml
-site_name: "My Blog"
-base_url: "https://yourdomain.com"
-author: "Your Name"
-description: "My personal blog"
-```
-
-1. **Build your site**:
+## Create, build, and preview
 
 ```bash
-python -m static_site_gen build
+static-site-gen init my-blog
+cd my-blog
+static-site-gen build
+static-site-gen serve --port 8000
+# Open http://localhost:8000/; press Ctrl+C to stop.
 ```
 
-1. **Preview locally**:
+`python -m static_site_gen` accepts the same commands. Scaffolding creates configuration, packaged templates, a Hello World post, an About page, and CSS. It accepts a new or empty directory and preserves existing files in occupied destinations.
 
-```bash
-python -m http.server -d site
-# Visit http://localhost:8000
-```
+Before deployment, edit `config.yaml` to set your site name, author, and public root URL. Preview serves the configured output directory on localhost. Use `--port 0` to choose an available port; the command prints the bound URL after startup.
 
-## Content Structure
+## Write content
 
-### Writing Posts
-
-Create Markdown files in `content/posts/` with this structure:
+Posts belong in `content/posts/*.md`; standalone pages belong in `content/pages/*.md`. Both require a nonempty title and a valid date. Dates are required in front matter; filenames do not supply a fallback.
 
 ```markdown
 ---
-title: "Your Post Title"           # Required
-date: 2025-10-30                  # Required (YYYY-MM-DD)
-tags: [python, web, tutorial]     # Optional
-description: "Post summary"       # Optional
-slug: custom-url-slug             # Optional (auto-generated from title)
-draft: false                      # Optional (default: false)
+title: "My First Post"
+date: 2026-10-17
+tags: [python, welcome]
+description: "An introduction to my blog"
+slug: my-first-post
+draft: false
 ---
 
-# Your Content Here
+# Welcome
 
-Write your post content in Markdown below the front matter.
+Write your content in Markdown.
 ```
 
-### Creating Pages
+`tags`, `description`, `slug`, and `draft` are optional. Tags are normalized and deduplicated. A missing slug is generated from the title; Unicode and valid nested slugs are supported. Ordinary duplicate slugs receive numeric suffixes. Conflicting output routes stop publication instead of overwriting another destination.
 
-Create static pages in `content/pages/`:
+Published posts use `/posts/<slug>/`, pages `/<slug>/`, and tag archives `/tag/<tag>/`, each backed by `index.html`. The homepage lists newest posts first, with further pages under `/page/2/`. `/tag/` lists tags; `/feed.xml` and `/sitemap.xml` provide discovery. Draft posts are excluded unless you run:
 
 ```bash
-# content/pages/about.md
----
-title: "About Me"
-date: 2025-10-30
----
-
-# About Me
-
-This is my about page.
+static-site-gen build --drafts
 ```
 
-### URL Structure
+Malformed content is logged and skipped while valid files continue to build. Invalid configuration, unavailable Markdown extensions, and template setup or rendering failures return a nonzero status.
 
-Your content will be accessible at clean URLs:
-
-- **Posts**: `https://yoursite.com/posts/my-first-post/`
-- **Pages**: `https://yoursite.com/about/`
-- **Tags**: `https://yoursite.com/tag/python/`
-- **Homepage**: `https://yoursite.com/`
-
-## Customization
-
-### Templates
-
-Customize the look of your site by editing templates in the `templates/` directory:
-
-- `base.html` - Shared layout (header, footer, navigation)
-- `index.html` - Homepage with post listings
-- `post.html` - Individual blog post pages
-- `page.html` - Static pages like About
-- `tag.html` - Tag archive pages
-
-### Styling
-
-Add your CSS styles to `static/style.css`. All files in the `static/` directory are copied to your generated site.
-
-### Configuration
-
-Edit `config.yaml` to customize your site:
+## Configuration and templates
 
 ```yaml
 # Required settings
 site_name: "My Blog"
-base_url: "https://yourdomain.com"
-author: "Your Name"
+base_url: "https://example.com"
+author: "Author Name"
 
 # Optional settings
 timezone: "UTC"
-posts_per_page: 5
+posts_per_page: 10
+output_dir: "site"
 description: "My personal blog"
-keywords: ["blog", "personal"]
-
-# Markdown extensions
-markdown_extensions:
-  - "codehilite"    # Syntax highlighting
-  - "tables"        # Table support
-  - "toc"          # Table of contents
+markdown_extensions: [codehilite, tables, toc]
 ```
 
-## Commands
+`base_url` must be an absolute HTTP/HTTPS domain-root URL. A trailing slash is normalized away. Paths other than `/`, query strings, fragments, and embedded credentials are rejected. GitHub Pages project URLs such as `https://user.github.io/repository/` are unsupported; use a domain-root deployment or a custom domain.
 
-### Build Site
+Use an IANA timezone such as `America/Denver`; the package includes a timezone-data fallback. `posts_per_page` must be a positive integer. Omitted Markdown extensions use the defaults shown above; `markdown_extensions: []` disables optional extensions. `keywords` can hold metadata for custom templates; bundled templates do not emit a keywords element.
+
+Edit `templates/base.html` for shared layout, `index.html` for listings, `post.html` and `page.html` for content, and `tag.html` and `tag_index.html` for archives. RSS and sitemap templates are also editable. Files under `static/` are copied to the output's `static/` directory.
+
+Markdown and templates must be locally trusted. Converted Markdown bodies allow HTML. Script-tag removal provides limited protection and is not a full HTML sanitizer; templates are not sandboxed. Metadata is escaped by Jinja2.
+
+## Build output and deployment
+
+The default output is `site/`. `output_dir` must select a dedicated directory inside the project, outside content, templates, assets, configuration, Git metadata, and package source. Resolved symlink targets are checked. Cleanup guards also reject output containing shell configuration files or `Desktop`/`Documents` directories.
+
+A build renders into a sibling temporary directory, then replaces the previous output after generation succeeds. Ordinary configuration, rendering, and write failures preserve the previous site. Swap failures attempt restoration and report a retained backup if restoration fails. Failure to remove an old backup after a successful publication produces a warning. This is not a guarantee of recovery without intervention after process or machine failure during publication.
+
+Deploy the generated directory's contents to the root of a static host. Configure the host's publishing directory explicitly; pushing a `site/` directory alone does not configure hosting. The preview server is for local development.
+
+## Develop and validate
 
 ```bash
-python -m static_site_gen build
-```
-
-Generates your complete site in the `site/` directory.
-
-`output_dir` may select a dedicated directory inside the project. The build rejects
-the project root, paths outside it, and paths overlapping content, templates,
-static assets, configuration, Git metadata, or this package's source. These checks
-use resolved paths, including symlink targets.
-
-The existing cleanup guards also reject output containing shell configuration
-files or `Desktop`/`Documents` directories.
-
-Generation happens in a temporary sibling directory. A rendering or write failure
-returns a nonzero status and preserves the previous site. A successful build
-replaces the output directory, removing obsolete generated files.
-
-### Initialize New Project
-
-```bash
-python -m static_site_gen init my-blog
-```
-
-Creates a new site with sample content, templates, and configuration.
-
-### Development Workflow
-
-```bash
-# Build your site
-python -m static_site_gen build
-
-# Start local server using the configured output_dir
-python -m static_site_gen serve
-
-# Open http://localhost:8000 in your browser
-```
-
-## Deployment
-
-After building your site with `python -m static_site_gen build`, you can deploy the `site/` directory to any static hosting service:
-
-- **GitHub Pages**: Push the `site/` directory to your repository
-- **Netlify**: Drag and drop the `site/` folder
-- **Vercel**: Deploy from your Git repository
-- **Any web server**: Upload the `site/` directory contents
-
-## Project Structure
-
-```ascii
-your-blog/
-├── content/                  # Your content
-│   ├── posts/               # Blog posts (YYYY-MM-DD-slug.md)
-│   └── pages/               # Static pages
-├── templates/               # HTML templates
-│   ├── base.html           # Shared layout
-│   ├── index.html          # Homepage
-│   ├── post.html           # Blog post template
-│   ├── page.html           # Static page template
-│   └── tag.html            # Tag archive template
-├── static/                  # Static assets (CSS, images, etc.)
-│   └── style.css           # Your styles
-├── site/                    # Generated site (auto-created)
-├── config.yaml             # Site configuration
-└── pyproject.toml          # Package and dependency configuration
-```
-
-## Requirements
-
-- Python 3.12 or higher
-- Dependencies: `markdown`, `jinja2`, `pyyaml`
-
-## Development Quality Checks
-
-```bash
+git clone https://github.com/johnmulder/static_site_gen.git
+cd static_site_gen
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[dev]'
 make check
 ```
 
-After installing `.[dev]`, this noninteractive gate runs Ruff, formatting, mypy,
-pytest with a 95% coverage floor, pre-commit, and installed-package checks.
-CI runs the same gate on Python 3.12, 3.13, and 3.14. Each wheel and sdist is
-installed in a fresh environment, where the CLI must scaffold and build a sample
-site with its packaged templates, pages, tag archives, feed, sitemap, and CSS.
-Package checks can also run separately:
+`make check` runs lint, formatting, types, tests with at least 95% coverage, pre-commit hooks, and isolated wheel/sdist installation checks. CI covers Python 3.12, 3.13, and 3.14 on Linux, with a macOS smoke check. Network access is needed to install dependencies and initialize hooks.
+
+`make release-check` additionally verifies the clean release candidate and retains the checked wheel, source archive, checksums, notes, dependency audit, and acceptance evidence in `dist/release/0.1.0a1/`. Readiness validates an unpublished GitHub prerelease draft. It does not publish publicly.
 
 ```bash
-make check-package
+# Validate without release writes.
+gh workflow run release.yml -f mode=dry-run
+
+# Prepare and verify the unpublished draft and its assets.
+gh workflow run release.yml -f mode=prepare
+
+# Separate public publication of the already verified candidate.
+gh workflow run release.yml -f mode=publish
 ```
 
-For detailed development information, see [DEVELOPMENT.md](DEVELOPMENT.md).
+See [DEVELOPMENT.md](DEVELOPMENT.md), [CHANGELOG.md](CHANGELOG.md), and [RELEASE_PLAN.md](RELEASE_PLAN.md) for development, alpha notes, and acceptance details.

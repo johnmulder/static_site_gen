@@ -6,9 +6,10 @@
 # Required Settings
 site_name: "My Blog"
 base_url: "https://example.com"
+# Use a domain-root HTTP/HTTPS URL; URL prefixes are unsupported.
 author: "Author Name"
 
-# Optional Settings (with defaults)
+# Optional Settings
 timezone: "UTC"                    # Timezone for date handling (use IANA timezone names)
 posts_per_page: 5                 # Posts per page for pagination
 output_dir: "site"                # Output directory name (relative to project root)
@@ -18,12 +19,9 @@ description: "A personal blog built with a Python static site generator"
 keywords: ["blog", "personal", "python", "static-site"]
 
 # Build Settings (optional)
-markdown_extensions:              # Additional Markdown extensions to enable
-  - "codehilite"                 # Syntax highlighting for code blocks
+markdown_extensions:              # Enabled extensions; [] disables optional extensions
+  - "codehilite"                 # Code block markup (Pygments is optional)
   - "tables"                     # Table support
   - "toc"                        # Table of contents generation
 
-# Future Configuration Options (not yet implemented)
-# rss_feed: true                # Generate RSS feed
-# sitemap: true                 # Generate sitemap.xml
-# comments: false               # Comment system integration
+# RSS and sitemap output are always generated.

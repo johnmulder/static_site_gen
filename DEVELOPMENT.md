@@ -1,230 +1,116 @@
 # Development Guide
 
-## Project Architecture
+## Supported alpha contract
 
-### Core Components
+The first alpha is `0.1.0a1`, for Python 3.12-3.14 on Linux and macOS. Windows support, URL-prefix hosting, and PyPI publication are deferred. Runtime content and templates are locally trusted; Markdown HTML is not fully sanitized and templates are not sandboxed.
 
-- `static_site_gen/generator/core.py` - Main build engine and orchestration
-- `static_site_gen/generator/parser.py` - Content parsing and front matter validation
-- `static_site_gen/generator/renderer.py` - Jinja2 template rendering
-- `static_site_gen/generator/output.py` - Output generation, URL routing, and file operations
-- `static_site_gen/cli.py` - Command-line interface
+The public CLI is `static-site-gen` or `python -m static_site_gen`, with `init`, `build`, and `serve`. Public package version APIs and distribution metadata use the version in `pyproject.toml`.
 
-### Build Process Implementation
+## Architecture
 
-1. **Configuration Loading**: Load and validate `config.yaml` for site-wide settings
-1. **Content Discovery**: Scan `content/posts/*.md` and `content/pages/*.md`
-1. **Content Processing**: For each file:
-   - Split YAML front matter and Markdown body
-   - Parse and validate metadata
-   - Convert Markdown to HTML
-   - Generate slug if missing (kebab-case from title)
-   - Render with appropriate template
-   - Write to `site/.../index.html`
-1. **Index Generation**: Build homepage from sorted post list
-1. **Tag Pages**: Generate `/tag/<tag>/` pages from tag index
-1. **Static Assets**: Copy `static/` to `site/static/`
-1. **Publication**: Generate in a sibling temporary directory, then replace the
-   previous output after rendering and writes succeed. Reject output paths that
-   overlap source inputs before creating the staging directory.
+- `static_site_gen/generator/core.py`: configuration, discovery, route planning, and build orchestration.
+- `static_site_gen/generator/parser.py`: YAML front matter, metadata validation, dates, slugs, and Markdown conversion.
+- `static_site_gen/generator/renderer.py`: Jinja2 rendering and shared route filters.
+- `static_site_gen/generator/output.py`: paths, publication, asset copying, sorting, and pagination.
+- `static_site_gen/cli.py`: command arguments, scaffolding from packaged templates, build diagnostics, and localhost preview.
+- `static_site_gen/resources/templates/`: templates included in installed distributions.
+- `templates/`: templates used by the repository's sample site.
+- `scripts/`: package and release verification.
 
-### Template System
+A build validates configuration and extension setup, discovers content in stable order, parses metadata, filters draft posts, checks output destinations, renders content and indexes, generates XML, and copies static assets. Generation uses a sibling staging directory. Publication replaces the configured output after generation succeeds.
 
-Uses Jinja2 with template inheritance:
-
-- `base.html` - Shared layout with header/footer
-- `post.html` - Individual blog post (extends base)
-- `page.html` - Static pages like About (extends base)
-- `index.html` - Homepage with post listing (extends base)
-- `tag.html` - Tag archive pages (extends base)
-
-### Content Model
-
-#### Front Matter Schema
-
-- **Required**: `title`, `date`
-- **Optional**: `tags` (list), `draft` (boolean), `description`, `slug`
-
-#### URL Generation
-
-- Posts: `/posts/<slug>/index.html`
-- Pages: `/<slug>/index.html`
-- Tags: `/tag/<tag>/index.html`
-- Static: `/static/...`
-
-## Development Setup
-
-### Prerequisites
-
-- Python 3.12+
-- Virtual environment recommended
-
-### Installation
+## Setup
 
 ```bash
-# Clone repository
 git clone https://github.com/johnmulder/static_site_gen.git
 cd static_site_gen
-
-# Create virtual environment
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install in development mode
-pip install -e '.[dev]'
+source .venv/bin/activate
+python -m pip install -e '.[dev]'
 ```
 
-### Running Tests
+Development dependency installation, initial pre-commit environments, isolated package installations, and dependency audits need network access. Tests and preview checks use temporary projects and bounded localhost requests; no manual browser inspection is required.
+
+## Acceptance gates
 
 ```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=static_site_gen --cov-report=term-missing
-
-# Run specific test file
-pytest tests/test_parser.py
-```
-
-### Code Quality
-
-```bash
-# Check formatting and lint code
-ruff format --check .
-ruff check .
-
-# Type checking
-mypy static_site_gen tests scripts
-
-# Format Markdown
-mdformat README.md DEVELOPMENT.md
-```
-
-### Post-Implementation Checklist
-
-Run the same noninteractive acceptance gate locally and in CI:
-
-```bash
+# Complete checkout gate.
 make check
+
+# Individual checks when investigating a failure.
+make lint
+make test
+make check-package
+
+# Prepare and retain a verified release bundle from a clean commit.
+make release-check
 ```
 
-Expected result: all commands pass with no file changes required.
+`make check` runs Ruff lint and formatting checks, mypy, pytest with a 95% coverage floor, pre-commit hooks, and fresh installed wheel/source-archive checks. Ordinary package checks use temporary output. Source-archive verification runs outside the checkout with its own included test fixtures and templates; its non-Git checks do not recursively invoke archive verification.
 
-The gate runs lint, format and type checks, tests with at least 95% coverage,
-pre-commit hooks, and wheel/sdist installation checks in fresh temporary
-environments. It uses no manual browser preview or approval step. Installing
-development dependencies and initial pre-commit environments requires network
-access. CI checks Python 3.12, 3.13, and 3.14. See [MERGE_PLAN.md](MERGE_PLAN.md)
-for the current branch's completion record.
+`make release-check` validates the exact candidate artifacts and retains them under `dist/release/0.1.0a1/`, together with SHA-256 hashes, source commit, release notes, resolved runtime dependencies, advisory results, and acceptance evidence. Publication consumes those checked files without rebuilding them. A failed gate remains a failure; no manual waiver or browser approval is part of readiness.
 
-### Testing Coverage
+CI runs the checkout gates on Linux with Python 3.12, 3.13, and 3.14 and includes a macOS smoke job. Release validation covers the runtime dependency floors and current resolution, source archive completeness, strict distribution metadata, isolated installed commands, and operation without system timezone data.
 
-The 95% coverage floor is enforced by `make test` and `make check` locally and in CI.
+Useful targeted commands include:
 
-Key test areas:
-
-- Content parsing and validation
-- Template rendering
-- URL generation and file operations
-- CLI interface
-- Security (path traversal protection)
-- Error handling
-
-## Project Structure
-
-```ascii
-static_site_gen/
-├── static_site_gen/              # Main package
-│   ├── __init__.py
-│   ├── __main__.py              # Entry point for `python -m static_site_gen`
-│   ├── cli.py                   # Command-line interface
-│   └── generator/               # Core generator modules
-│       ├── __init__.py
-│       ├── core.py              # Main build engine
-│       ├── parser.py            # Content parsing
-│       ├── renderer.py          # Template rendering
-│       └── output.py            # Output generation and file operations
-├── content/                     # Content source files
-│   ├── posts/                   # Blog posts (YYYY-MM-DD-slug.md)
-│   └── pages/                   # Static pages
-├── templates/                   # Jinja2 templates
-├── static/                      # Static assets (CSS, JS, images)
-├── site/                        # Generated output (git-ignored)
-├── tests/                       # Test suite
-├── config.yaml                  # Site configuration
-└── pyproject.toml              # Package and tool configuration
+```bash
+pytest tests/test_parser.py
+ruff check .
+ruff format --check .
+mypy static_site_gen tests scripts
+mdformat --check README.md DEVELOPMENT.md CHANGELOG.md RELEASE_PLAN.md
 ```
 
-## Configuration Options
+Keep the packaged and sample templates consistent. Preserve meaningful parser, routing/security, publication rollback, CLI, and installed-artifact regressions. Do not run destructive builds against content or user-owned output directories during verification.
 
-### Required Settings
+## Content and configuration
+
+Posts and pages require a nonempty `title` and a valid `date`. Optional metadata includes string tags, boolean `draft`, string `description`, and a string `slug`. Slugs can be generated from titles and support Unicode and valid nested routes. Normalized tags are unique within a post. Invalid content is logged with its filename and skipped; no filename-date fallback exists.
+
+Configuration requires nonempty `site_name`, `base_url`, and `author`. Supported URLs are absolute HTTP/HTTPS domain roots, with an optional trailing slash normalized away. Prefix paths, query strings, fragments, credentials, and malformed hosts are rejected. IANA timezone names are validated and timezone-aware dates are preserved. `posts_per_page` is a positive integer, excluding booleans.
 
 ```yaml
 site_name: "My Blog"
 base_url: "https://example.com"
 author: "Author Name"
-```
-
-### Optional Settings
-
-```yaml
-timezone: "UTC"                    # IANA timezone name
-posts_per_page: 5                 # Posts per page for pagination
-output_dir: "site"                # Output directory
+timezone: "UTC"
+posts_per_page: 10
+output_dir: "site"
 description: "Site description"
-keywords: ["blog", "personal"]
-markdown_extensions:              # Additional Markdown extensions
-  - "codehilite"
-  - "tables"
-  - "toc"
+markdown_extensions: [codehilite, tables, toc]
 ```
 
-## Security Considerations
+An omitted `markdown_extensions` setting uses the defaults shown above. An explicit empty list disables optional extensions. Invalid or unavailable extensions stop setup before any output is published. `keywords` is available to custom templates; bundled templates do not emit it.
 
-- **Path Traversal Protection**: All file paths are validated to prevent directory traversal attacks
-- **URL Encoding**: Handles URL-encoded path traversal attempts
-- **Template Security**: Jinja2 auto-escaping enabled by default
-- **Input Validation**: Front matter and configuration are strictly validated
+Routes are `/posts/<slug>/`, `/<slug>/`, `/tag/<tag>/`, and `/page/<number>/`, backed by `index.html`. The homepage, tag index, RSS, sitemap, and static assets have reserved destinations. Ordinary duplicate content slugs receive deterministic suffixes; conflicts with other planned destinations fail before publication with source diagnostics.
 
-## Error Handling
+## Trust and failure behavior
 
-### Fail-Fast Scenarios
+YAML uses safe loading and Jinja2 escapes metadata. Converted Markdown bodies are marked safe in templates. Removing script tags is not a complete sanitizer and does not make third-party HTML trusted. Build only locally trusted Markdown and templates.
 
-- Missing or invalid `config.yaml`
-- Template directory not found
-- Invalid configuration YAML
-- Template rendering or output write failures (the previous generated site is
-  preserved)
+Output must remain inside the project and outside its input directories, configuration, Git metadata, and package source. Routing checks decoded segments and resolved path containment; publication uses the same cleanup guards as ordinary builds.
 
-### Graceful Handling
+Configuration, template, rendering, and write errors return nonzero statuses. Generation failures preserve previous output. Swap failures attempt rollback; if rollback cannot complete, diagnostics identify the retained previous-site backup. Backup cleanup failure after a completed swap warns and leaves publication successful. Process death between directory renames can require recovery; publication is not crash-atomic.
 
-- Missing optional front matter fields (uses defaults)
-- Invalid front matter, dates, or metadata types (logs and skips the content file)
-- Missing static files
+`init` preserves occupied destinations, writes UTF-8, and reports filesystem failures. `serve` validates configuration and port range, binds only localhost, prints the actual bound URL after startup, and handles bind errors and Ctrl+C. Port zero chooses an available port.
 
-### Error Message Format
+## Alpha release workflow
 
-```text
-Error in content/posts/my-post.md: Missing required field 'date'
+[RELEASE_PLAN.md](RELEASE_PLAN.md) defines the complete noninteractive readiness criteria. The selected version is `0.1.0a1` and its tag is `v0.1.0a1`. The workflow uses the repository's automatic token; no additional publishing account or stored credential is required for GitHub Releases.
+
+```bash
+# Read-only delivery validation; no release writes.
+gh workflow run release.yml -f mode=dry-run
+
+# Validate, retain the bundle, create/resume the unpublished prerelease draft,
+# upload the exact checked assets, and verify their downloaded hashes.
+gh workflow run release.yml -f mode=prepare
+
+# Explicit public publication after validation of the frozen candidate.
+gh workflow run release.yml -f mode=publish
 ```
 
-## Contributing
+Prepare is the default mode. Readiness completes with passing gates and a verified unpublished draft; implementation and readiness checks must not run publish mode. Publish validates the frozen version, source commit, tag, asset hashes, and required gates, then publishes the prepared candidate. It must not move existing tags or overwrite published assets. Repeat preparation may resume only a matching candidate; mismatches and service failures remain visible failures with retained artifacts.
 
-1. Fork the repository
-1. Create a feature branch (`git checkout -b feature/amazing-feature`)
-1. Make your changes
-1. Add tests for new functionality
-1. Run all acceptance checks (`make check`)
-1. Commit your changes (`git commit -m 'Add amazing feature'`)
-1. Push to the branch (`git push origin feature/amazing-feature`)
-1. Open a Pull Request
-
-## Release Process
-
-1. Update version in `pyproject.toml`
-1. Update `CHANGELOG.md` with new features and fixes
-1. Run full test suite
-1. Create git tag (`git tag v0.2.0`)
-1. Push tag (`git push --tags`)
-1. Build and publish to PyPI (if configured)
+Changes to runtime behavior require appropriate regression tests. Commit each major change with a one-line message, run the affected checks, then run the full gate on the clean candidate. Update [CHANGELOG.md](CHANGELOG.md) and readiness evidence before delivery; no manual version editing or human approval belongs inside an executing release gate.
