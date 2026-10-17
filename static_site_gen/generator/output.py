@@ -174,18 +174,8 @@ def sort_posts_by_date(
     return sorted(posts, key=lambda p: p["date"], reverse=reverse)
 
 
-def clean_output_dir(output_dir: Path) -> None:
-    """
-    Remove and recreate output directory.
-
-    Args:
-        output_dir: Directory to clean and recreate
-
-    Raises:
-        ValueError: If output directory path appears unsafe
-    """
-    resolved_output = output_dir.resolve()
-
+def _validate_cleanup_safety(resolved_output: Path) -> None:
+    """Reject directories that appear to contain user files before replacement."""
     if str(resolved_output) in ["/", "/Users", "/home", "/System", "/Applications"]:
         raise ValueError(
             f"Refusing to clean potentially dangerous directory: {resolved_output}"
@@ -198,6 +188,19 @@ def clean_output_dir(output_dir: Path) -> None:
         raise ValueError(
             f"Directory appears to contain user files, refusing to clean: {resolved_output}"
         )
+
+
+def clean_output_dir(output_dir: Path) -> None:
+    """
+    Remove and recreate output directory.
+
+    Args:
+        output_dir: Directory to clean and recreate
+
+    Raises:
+        ValueError: If output directory path appears unsafe
+    """
+    _validate_cleanup_safety(output_dir.resolve())
 
     if output_dir.exists():
         shutil.rmtree(output_dir)
@@ -224,6 +227,7 @@ def validate_output_dir(output_dir: Path, project_root: Path) -> Path:
             raise ValueError(f"output_dir overlaps a project input: {source}")
     if output.exists() and not output.is_dir():
         raise ValueError("output_dir must be a directory")
+    _validate_cleanup_safety(output)
     return output
 
 
@@ -233,6 +237,7 @@ def publish_output(staged: Path, output: Path) -> None:
         staged.replace(output)
         return
 
+    shutil.copymode(output, staged)
     backup = Path(
         tempfile.mkdtemp(prefix=f".{output.name}-previous-", dir=output.parent)
     )

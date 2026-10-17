@@ -2,6 +2,7 @@
 
 from argparse import Namespace
 from pathlib import Path
+from stat import S_IMODE
 from unittest.mock import patch
 
 import pytest
@@ -91,6 +92,48 @@ def test_build_rejects_an_ancestor_of_a_resolved_source(tmp_path):
 
     assert cmd_build(Namespace(project_dir=str(project), drafts=False)) == 1
     assert (project / "sources/content/posts").is_dir()
+
+
+@pytest.mark.parametrize(
+    "marker", [".bash_profile", ".bashrc", ".zshrc", "Desktop", "Documents"]
+)
+def test_build_preserves_output_containing_user_files(tmp_path, marker):
+    project = init_project(tmp_path)
+    output = project / "site"
+    output.mkdir()
+    evidence = output / marker
+    if marker in {"Desktop", "Documents"}:
+        evidence.mkdir()
+        evidence = evidence / "sentinel.txt"
+    evidence.write_text("user evidence")
+
+    with patch(
+        "static_site_gen.generator.core.SiteGenerator._generate_site"
+    ) as generate:
+        assert cmd_build(Namespace(project_dir=str(project), drafts=False)) == 1
+
+    generate.assert_not_called()
+    assert evidence.read_text() == "user evidence"
+    assert not list(project.glob(".site-build-*"))
+
+
+def test_build_rechecks_user_files_before_publication(tmp_path):
+    project = init_project(tmp_path)
+    SiteGenerator(project).build()
+    previous = (project / "site/index.html").read_bytes()
+    generate = SiteGenerator._generate_site
+    evidence = project / "site/.bashrc"
+
+    def generate_with_user_file(generator, include_drafts):
+        generate(generator, include_drafts)
+        evidence.write_text("user evidence")
+
+    with patch.object(SiteGenerator, "_generate_site", generate_with_user_file):
+        assert cmd_build(Namespace(project_dir=str(project), drafts=False)) == 1
+
+    assert evidence.read_text() == "user evidence"
+    assert (project / "site/index.html").read_bytes() == previous
+    assert not list(project.glob(".site-build-*"))
 
 
 def test_init_uses_packaged_templates_then_builds(tmp_path):
@@ -187,3 +230,29 @@ def test_successful_rebuild_replaces_output_without_stale_files(tmp_path):
     assert not (project / "site/stale.html").exists()
     assert (project / "site/index.html").is_file()
     assert not list(project.glob(".site-previous-*"))
+
+
+def test_new_output_uses_normal_directory_permissions(tmp_path):
+    project = init_project(tmp_path)
+    expected = tmp_path / "normal-directory"
+    expected.mkdir()
+
+    SiteGenerator(project).build()
+
+    assert S_IMODE((project / "site").stat().st_mode) == S_IMODE(
+        expected.stat().st_mode
+    )
+
+
+@pytest.mark.parametrize("mode", [0o755, 0o750, 0o700])
+def test_rebuild_preserves_output_permissions(tmp_path, mode):
+    project = init_project(tmp_path)
+    generator = SiteGenerator(project)
+    generator.build()
+    output = project / "site"
+    output.chmod(mode)
+    expected = S_IMODE(output.stat().st_mode)
+
+    generator.build()
+
+    assert S_IMODE(output.stat().st_mode) == expected

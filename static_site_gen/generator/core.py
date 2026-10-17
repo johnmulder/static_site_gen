@@ -598,7 +598,8 @@ class SiteGenerator:
             with tempfile.TemporaryDirectory(
                 prefix=f".{output.name}-build-", dir=output.parent
             ) as staging:
-                self.output_dir = Path(staging)
+                self.output_dir = Path(staging) / "site"
+                self.output_dir.mkdir()
                 self._generate_site(include_drafts)
                 validate_output_dir(output, self.project_root)
                 publish_output(self.output_dir, output)
