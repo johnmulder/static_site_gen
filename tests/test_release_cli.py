@@ -119,7 +119,7 @@ def test_init_reports_filesystem_encoding_failure(tmp_path, capsys):
 @pytest.mark.parametrize("port", [-1, 65536])
 def test_serve_rejects_invalid_ports_before_binding(sample_project, capsys, port):
     """Invalid ports produce a controlled failure and no readiness announcement."""
-    with patch("http.server.HTTPServer") as server:
+    with patch("static_site_gen.cli._PreviewServer") as server:
         assert cmd_serve(Namespace(project_dir=str(sample_project), port=port)) == 1
 
     server.assert_not_called()
@@ -131,12 +131,35 @@ def test_serve_rejects_invalid_ports_before_binding(sample_project, capsys, port
 def test_serve_reports_bind_failure_without_readiness(sample_project, capsys):
     """An unavailable port fails cleanly before announcing a running server."""
     (sample_project / "site").mkdir()
-    with patch("http.server.HTTPServer", side_effect=OSError("Address already in use")):
+    with patch(
+        "static_site_gen.cli._PreviewServer",
+        side_effect=OSError("Address already in use"),
+    ):
         assert cmd_serve(Namespace(project_dir=str(sample_project), port=8000)) == 1
 
     output = capsys.readouterr().out
     assert "Error serving site: Address already in use" in output
     assert "Serving site" not in output
+
+
+def test_preview_binding_does_not_require_reverse_dns(sample_project, capsys):
+    """Local preview can bind and stop even when reverse DNS is unavailable."""
+    (sample_project / "site").mkdir()
+    with (
+        patch(
+            "socket.getfqdn", side_effect=AssertionError("Reverse DNS is unavailable")
+        ) as reverse_dns,
+        patch(
+            "static_site_gen.cli._PreviewServer.serve_forever",
+            side_effect=KeyboardInterrupt,
+        ),
+    ):
+        assert cmd_serve(Namespace(project_dir=str(sample_project), port=0)) == 0
+
+    reverse_dns.assert_not_called()
+    output = capsys.readouterr().out
+    assert re.search(r"http://localhost:[1-9][0-9]*/", output)
+    assert "Server stopped." in output
 
 
 def test_preview_announces_bound_port_serves_and_stops(tmp_path):
@@ -147,8 +170,10 @@ def test_preview_announces_bound_port_serves_and_stops(tmp_path):
     process = subprocess.Popen(
         [
             sys.executable,
-            "-m",
-            "static_site_gen",
+            "-c",
+            "import faulthandler, runpy; "
+            "faulthandler.dump_traceback_later(20); "
+            "runpy.run_module('static_site_gen', run_name='__main__')",
             "serve",
             "--project-dir",
             str(project),
@@ -190,6 +215,14 @@ def test_preview_announces_bound_port_serves_and_stops(tmp_path):
         assert process.returncode == 0, errors
         assert b"Server stopped." in output
         assert b"Traceback" not in errors
+    except Exception as exc:
+        if process.poll() is None:
+            process.kill()
+        output, errors = process.communicate(timeout=10)
+        pytest.fail(
+            f"{exc}\nPreview stdout: {bytes(announcement) + output!r}\n"
+            f"Preview stderr: {errors.decode('utf-8', errors='replace')}",
+        )
     finally:
         if process.poll() is None:
             process.kill()

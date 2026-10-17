@@ -5,7 +5,9 @@ This module provides the CLI commands for building and managing static sites.
 """
 
 import argparse
+import http.server
 import logging
+import socketserver
 import sys
 from collections.abc import Callable
 from datetime import date
@@ -75,6 +77,15 @@ code { font-size: 0.9em; }
 """
 
 
+class _PreviewServer(http.server.HTTPServer):
+    """Bind a known loopback endpoint without a reverse-DNS lookup."""
+
+    def server_bind(self) -> None:
+        socketserver.TCPServer.server_bind(self)
+        self.server_name = "localhost"
+        self.server_port = self.server_address[1]
+
+
 def cmd_build(args: argparse.Namespace) -> int:
     """
     Execute site build command.
@@ -112,9 +123,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
     Args:
         args: Parsed command-line arguments (expects ``project_dir``, ``port``)
     """
-    # Lazy imports -- http.server is only needed for the serve command
     import functools
-    import http.server
 
     port: int = args.port
     if not 0 <= port <= 65535:
@@ -137,7 +146,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
         http.server.SimpleHTTPRequestHandler, directory=str(site_dir)
     )
     try:
-        with http.server.HTTPServer(("localhost", port), handler) as httpd:
+        with _PreviewServer(("127.0.0.1", port), handler) as httpd:
             print(
                 f"Serving site at http://localhost:{httpd.server_port}/  "
                 "(press Ctrl+C to stop)",

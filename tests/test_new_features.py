@@ -38,14 +38,14 @@ class TestServeCommand:
         site_dir.mkdir(parents=True)
         args = Namespace(project_dir=str(sample_project), port=9000)
 
-        with patch("http.server.HTTPServer") as server:
+        with patch("static_site_gen.cli._PreviewServer") as server:
             running = server.return_value.__enter__.return_value
             running.serve_forever.side_effect = KeyboardInterrupt
 
             assert cmd_serve(args) == 0
 
         address, handler = server.call_args.args
-        assert address == ("localhost", 9000)
+        assert address == ("127.0.0.1", 9000)
         assert handler.keywords["directory"] == str(site_dir)
         running.serve_forever.assert_called_once_with()
         server.return_value.__exit__.assert_called_once()
@@ -69,7 +69,7 @@ class TestServeCommand:
         else:
             config_path.write_text(configuration)
 
-        with patch("http.server.HTTPServer") as server:
+        with patch("static_site_gen.cli._PreviewServer") as server:
             assert cmd_serve(Namespace(project_dir=str(sample_project), port=8000)) == 1
         server.assert_not_called()
         assert "Configuration error:" in capsys.readouterr().out
