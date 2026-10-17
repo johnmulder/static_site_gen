@@ -112,11 +112,37 @@ class SiteConfig:
                 f"posts_per_page must be a positive integer, got: {posts_per_page}"
             )
 
-        parsed_url = urlparse(raw["base_url"])
-        if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+        base_url = raw["base_url"]
+        try:
+            parsed_url = urlparse(base_url)
+            hostname = parsed_url.hostname
+            parsed_url.port
+        except ValueError as exc:
+            raise ValueError(
+                "base_url must be a valid absolute HTTP/HTTPS URL"
+            ) from exc
+        if (
+            parsed_url.scheme not in {"http", "https"}
+            or not hostname
+            or any(
+                character.isspace() or ord(character) < 32 or ord(character) == 127
+                for character in base_url
+            )
+            or "\\" in base_url
+            or "%" in parsed_url.netloc
+        ):
             raise ValueError(
                 f"base_url must be a valid absolute HTTP/HTTPS URL, got: {raw['base_url']}"
             )
+        if parsed_url.username is not None or parsed_url.password is not None:
+            raise ValueError("base_url must not contain credentials")
+        if parsed_url.path not in {"", "/"} or parsed_url.params:
+            raise ValueError("base_url must use a domain root without a path prefix")
+        if "?" in base_url or "#" in base_url:
+            raise ValueError("base_url must not contain a query string or fragment")
+        base_url = parsed_url._replace(
+            netloc=parsed_url.netloc.lower(), path=""
+        ).geturl()
 
         timezone = raw.get("timezone", "UTC")
         if not isinstance(timezone, str) or not timezone.strip():
@@ -145,7 +171,7 @@ class SiteConfig:
 
         return cls(
             site_name=raw["site_name"],
-            base_url=raw["base_url"],
+            base_url=base_url,
             author=raw["author"],
             timezone=timezone,
             output_dir=output_dir,
