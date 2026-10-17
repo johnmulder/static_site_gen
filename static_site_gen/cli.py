@@ -16,15 +16,15 @@ from typing import cast
 import yaml
 from jinja2 import TemplateError
 
-from .generator.core import SiteGenerator
+from .generator.core import SiteConfig, SiteGenerator
+from .generator.output import validate_output_dir
 
 # ---------------------------------------------------------------------------
-# Default scaffolding content embedded as strings so ``init`` works without
-# needing to locate installed package data.
+# Default project content; templates are copied from packaged resources.
 # ---------------------------------------------------------------------------
 
 _DEFAULT_CONFIG = """\
-site_name: "{site_name}"
+site_name: {site_name}
 base_url: "https://example.com"
 author: "Your Name"
 description: "A new static site"
@@ -116,8 +116,13 @@ def cmd_serve(args: argparse.Namespace) -> int:
     import functools
     import http.server
 
-    project_root = Path(args.project_dir).resolve()
-    site_dir = project_root / "site"
+    try:
+        project_root = Path(args.project_dir).resolve()
+        config = SiteConfig.from_yaml(project_root / "config.yaml")
+        site_dir = validate_output_dir(project_root / config.output_dir, project_root)
+    except (OSError, ValueError, yaml.YAMLError) as e:
+        print(f"Configuration error: {e}")
+        return 1
 
     if not site_dir.is_dir():
         print(f"Error: Output directory '{site_dir}' not found. Run 'build' first.")
@@ -167,7 +172,10 @@ def cmd_init(args: argparse.Namespace) -> int:
             d.mkdir(parents=True, exist_ok=True)
 
         # Config
-        config_text = _DEFAULT_CONFIG.format(site_name=args.project_name)
+        site_name = yaml.safe_dump(
+            args.project_name, default_style='"', allow_unicode=True
+        ).strip()
+        config_text = _DEFAULT_CONFIG.format(site_name=site_name)
         (project_dir / "config.yaml").write_text(config_text)
 
         # Sample content
