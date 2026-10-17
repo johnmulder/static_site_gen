@@ -14,6 +14,60 @@ from pathlib import Path
 from typing import Any
 
 
+def validate_route_value(value: str) -> None:
+    """Require unambiguous segments for a slug or normalized tag."""
+    if any(not part or part in {".", ".."} for part in value.split("/")):
+        raise ValueError(f"Ambiguous route segments: {value!r}")
+    if ".." in value or "\\" in value:
+        raise ValueError(f"Unsafe route value: {value!r}")
+    if any(part != part.strip() for part in value.split("/")):
+        raise ValueError(f"Whitespace around route segment: {value!r}")
+    if any(ord(character) < 32 or ord(character) == 127 for character in value):
+        raise ValueError(f"Control character in route value: {value!r}")
+
+
+def validate_output_routes(
+    routes: list[tuple[Path, str]], reserved_directories: list[tuple[Path, str]]
+) -> None:
+    """Reserve destinations on the staging filesystem, detecting its path aliases."""
+    claims: dict[tuple[int, int], tuple[Path, str]] = {}
+    directory_owners: dict[tuple[int, int], tuple[Path, str]] = {}
+    destinations = [(path, source, True) for path, source in reserved_directories]
+    destinations.extend((path, source, False) for path, source in routes)
+    for path, source, is_directory in destinations:
+        creation_error: OSError | None = None
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            creation_error = exc
+        for component in (path, *path.parents):
+            try:
+                status = component.stat()
+            except (FileNotFoundError, NotADirectoryError):
+                continue
+            identity = (status.st_dev, status.st_ino)
+            conflict = claims.get(identity)
+            if component == path:
+                conflict = conflict or directory_owners.get(identity)
+            if conflict is not None:
+                previous_path, previous_source = conflict
+                raise ValueError(
+                    f"Output route conflict at {path}: {source} conflicts with "
+                    f"{previous_source} ({previous_path})"
+                )
+        if creation_error is not None:
+            raise creation_error
+        if is_directory:
+            path.mkdir()
+        else:
+            path.touch(exist_ok=False)
+        status = path.stat()
+        claims[(status.st_dev, status.st_ino)] = (path, source)
+        for parent in path.parents:
+            status = parent.stat()
+            directory_owners.setdefault((status.st_dev, status.st_ino), (path, source))
+
+
 def copy_static_files(source_dir: Path, dest_dir: Path) -> None:
     """
     Copy all files from source directory to destination directory.

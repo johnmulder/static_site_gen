@@ -18,6 +18,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import markdown
 import yaml
 
+from .output import validate_route_value
+
 
 class ParseError(Exception):
     """Raised when content parsing fails."""
@@ -362,6 +364,13 @@ def parse_content_file(
 
     # Extract and validate optional fields
     tags, draft, description = _extract_optional_fields(front_matter, filepath)
+    try:
+        validate_route_value(slug)
+        for tag in tags:
+            if tag.strip():
+                validate_route_value(tag.lower().strip())
+    except ValueError as exc:
+        raise ParseError(str(exc), filepath) from exc
 
     # Convert Markdown to HTML using configured extensions
     md = markdown.Markdown(

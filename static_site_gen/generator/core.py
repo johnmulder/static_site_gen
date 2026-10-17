@@ -25,6 +25,7 @@ from .output import (
     publish_output,
     sort_posts_by_date,
     validate_output_dir,
+    validate_output_routes,
     write_file,
 )
 from .parser import ParsedContent, ParseError, parse_content_file
@@ -239,8 +240,8 @@ class SiteGenerator:
         pages_dir = self.content_dir / "pages"
 
         content_files = {
-            "posts": list(posts_dir.glob("*.md")) if posts_dir.exists() else [],
-            "pages": list(pages_dir.glob("*.md")) if pages_dir.exists() else [],
+            "posts": sorted(posts_dir.glob("*.md")) if posts_dir.exists() else [],
+            "pages": sorted(pages_dir.glob("*.md")) if pages_dir.exists() else [],
         }
 
         return content_files
@@ -266,7 +267,7 @@ class SiteGenerator:
         slugs: set[str] = set()
         results: list[ParsedContent] = []
 
-        for filepath in files:
+        for filepath in sorted(files):
             try:
                 parsed = parse_content_file(filepath, extensions, timezone)
 
@@ -582,6 +583,76 @@ class SiteGenerator:
             dest_static_dir = self.output_dir / "static"
             copy_static_files(self.static_dir, dest_static_dir)
 
+    def _validate_routes(
+        self, posts: list[ParsedContent], pages: list[ParsedContent]
+    ) -> None:
+        """Reserve all generated destinations before rendering or copying assets."""
+        if self.config is None:
+            raise RuntimeError("Configuration must be loaded before validating routes")
+        routes = [
+            (
+                self.output_dir / "index.html",
+                f"homepage ({self.template_dir / 'index.html'})",
+            ),
+            (
+                self.output_dir / "feed.xml",
+                f"RSS feed ({self.template_dir / 'feed.xml'})",
+            ),
+            (
+                self.output_dir / "sitemap.xml",
+                f"sitemap ({self.template_dir / 'sitemap.xml'})",
+            ),
+            (
+                self.output_dir / "tag/index.html",
+                f"tag index ({self.template_dir / 'tag_index.html'})",
+            ),
+        ]
+        for post in posts:
+            routes.append(
+                (
+                    get_output_path(
+                        self.output_dir, generate_post_url(post.metadata.slug)
+                    ),
+                    f"post {post.filepath}",
+                )
+            )
+        for page in pages:
+            routes.append(
+                (
+                    get_output_path(
+                        self.output_dir, generate_page_url(page.metadata.slug)
+                    ),
+                    f"page {page.filepath}",
+                )
+            )
+        tag_sources: dict[str, list[str]] = {}
+        for post in posts:
+            for tag in post.metadata.tags or []:
+                tag_sources.setdefault(tag, []).append(str(post.filepath))
+        for tag, sources in sorted(tag_sources.items()):
+            routes.append(
+                (
+                    get_output_path(self.output_dir, generate_tag_url(tag)),
+                    f"tag {tag!r} from {', '.join(sources)}",
+                )
+            )
+        for pagination in paginate_posts(
+            [post.to_dict() for post in posts], self.config.posts_per_page
+        )[1:]:
+            number = pagination["page_number"]
+            routes.append(
+                (
+                    self.output_dir / "page" / str(number) / "index.html",
+                    f"pagination page {number} ({self.config_file})",
+                )
+            )
+        reserved = []
+        if self.static_dir.exists():
+            reserved.append(
+                (self.output_dir / "static", f"static assets {self.static_dir}")
+            )
+        validate_output_routes(routes, reserved)
+
     def build(self, include_drafts: bool = False) -> None:
         """
         Execute complete site build process.
@@ -648,6 +719,8 @@ class SiteGenerator:
         logger.info(
             "Processing %d published posts and %d pages", len(posts), len(pages)
         )
+
+        self._validate_routes(posts, pages)
 
         # Generate content
         logger.info("Generating post pages...")
