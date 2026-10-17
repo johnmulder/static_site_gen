@@ -231,7 +231,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         print(f"  cd {args.project_name}")
         print("  static-site-gen build")
         return 0
-    except OSError as e:
+    except (OSError, UnicodeError) as e:
         print(f"Error creating project: {e}")
         return 1
 

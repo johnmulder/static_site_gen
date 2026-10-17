@@ -7,8 +7,10 @@ import selectors
 import signal
 import subprocess
 import sys
+import time
 from argparse import Namespace
 from contextlib import closing
+from importlib import resources
 from unittest.mock import patch
 
 import pytest
@@ -28,8 +30,19 @@ def test_init_preserves_an_existing_regular_file(tmp_path, capsys):
     assert "not a directory" in capsys.readouterr().out
 
 
-def test_unicode_scaffold_builds_under_non_utf8_file_locale(tmp_path):
-    """Scaffold content uses UTF-8 independently of the process file locale."""
+def test_unicode_project_name_builds_with_utf8_filesystem(tmp_path):
+    """Unicode names work with the supported platforms' normal filesystem encoding."""
+    project = tmp_path / "\u65e5\u672c\u8a9e"
+    assert cmd_init(Namespace(project_name=str(project))) == 0
+
+    SiteGenerator(project).build()
+
+    assert "\u65e5\u672c\u8a9e" in (project / "config.yaml").read_text(encoding="utf-8")
+    assert (project / "site/index.html").is_file()
+
+
+def test_unicode_scaffold_content_uses_utf8_under_ascii_locale(tmp_path):
+    """Unicode text does not depend on the default file encoding or Unicode paths."""
     environment = dict(
         os.environ,
         PYTHONUTF8="0",
@@ -42,11 +55,19 @@ def test_unicode_scaffold_builds_under_non_utf8_file_locale(tmp_path):
         [
             sys.executable,
             "-c",
-            "import sys; from argparse import Namespace; from pathlib import Path; "
-            "from static_site_gen.cli import cmd_init; "
+            "import codecs, locale, sys; "
+            "from argparse import Namespace; from pathlib import Path; "
+            "from static_site_gen import cli; "
             "from static_site_gen.generator.core import SiteGenerator; "
-            "project = Path(sys.argv[1]) / '\\u65e5\\u672c\\u8a9e'; "
-            "assert cmd_init(Namespace(project_name=str(project))) == 0; "
+            "assert codecs.lookup(locale.getpreferredencoding(False)).name == 'ascii'; "
+            "label = '\\u65e5\\u672c\\u8a9e'; "
+            "cli._DEFAULT_CONFIG = cli._DEFAULT_CONFIG.replace("
+            "'site_name: {site_name}', 'site_name: Locale ' + label); "
+            "cli._DEFAULT_FIRST_POST = cli._DEFAULT_FIRST_POST.replace("
+            "'Hello World', 'Locale Post ' + label); "
+            "cli._DEFAULT_STYLE += '\\n/* ' + label + ' */\\n'; "
+            "project = Path(sys.argv[1]) / 'ascii-project'; "
+            "assert cli.cmd_init(Namespace(project_name=str(project))) == 0; "
             "SiteGenerator(project).build(); "
             "assert (project / 'site/index.html').is_file()",
             str(tmp_path),
@@ -59,11 +80,40 @@ def test_unicode_scaffold_builds_under_non_utf8_file_locale(tmp_path):
     )
 
     assert result.returncode == 0, result.stdout + result.stderr
-    project = tmp_path / "\u65e5\u672c\u8a9e"
-    assert "\u65e5\u672c\u8a9e" in (project / "config.yaml").read_text(encoding="utf-8")
+    project = tmp_path / "ascii-project"
+    assert "Locale \u65e5\u672c\u8a9e" in (project / "config.yaml").read_text(
+        encoding="utf-8"
+    )
+    assert "Locale Post \u65e5\u672c\u8a9e" in next(
+        (project / "content/posts").glob("*.md")
+    ).read_text(encoding="utf-8")
+    assert "Locale Post \u65e5\u672c\u8a9e" in (
+        project / "site/posts/locale-post/index.html"
+    ).read_text(encoding="utf-8")
+    template = project / "templates/index.html"
+    packaged = resources.files("static_site_gen.resources").joinpath(
+        "templates/index.html"
+    )
+    assert template.read_bytes() == packaged.read_bytes()
+    assert "\u2190" in template.read_text(encoding="utf-8")
+    assert "\u65e5\u672c\u8a9e" in (project / "site/static/style.css").read_text(
+        encoding="utf-8"
+    )
     about = (project / "site/about/index.html").read_text(encoding="utf-8")
     assert "https://github.com/johnmulder/static_site_gen" in about
     assert "github.com/example/" not in about
+
+
+def test_init_reports_filesystem_encoding_failure(tmp_path, capsys):
+    """A filesystem that cannot encode a name gets a controlled diagnostic."""
+    with patch(
+        "static_site_gen.cli.Path.resolve",
+        side_effect=UnicodeEncodeError("ascii", "\u65e5", 0, 1, "unsupported path"),
+    ):
+        assert cmd_init(Namespace(project_name=str(tmp_path / "\u65e5"))) == 1
+
+    assert "Error creating project:" in capsys.readouterr().out
+    assert list(tmp_path.iterdir()) == []
 
 
 @pytest.mark.parametrize("port", [-1, 65536])
@@ -107,16 +157,24 @@ def test_preview_announces_bound_port_serves_and_stops(tmp_path):
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
+        bufsize=0,
     )
     try:
         assert process.stdout is not None
+        announcement = bytearray()
+        deadline = time.monotonic() + 30
         with selectors.DefaultSelector() as ready:
             ready.register(process.stdout, selectors.EVENT_READ)
-            assert ready.select(timeout=10), "Preview did not announce readiness"
-            announcement = process.stdout.readline()
-        address = re.search(r"http://localhost:(\d+)/", announcement)
+            while b"\n" not in announcement:
+                remaining = deadline - time.monotonic()
+                assert remaining > 0, "Preview startup timed out"
+                events = ready.select(timeout=remaining)
+                assert events, "Preview did not announce readiness"
+                chunk = os.read(process.stdout.fileno(), 4096)
+                if not chunk:
+                    break
+                announcement.extend(chunk)
+        address = re.search(rb"http://localhost:(\d+)/", announcement)
         assert address is not None, announcement
         port = int(address.group(1))
         assert 1 <= port <= 65535
@@ -130,8 +188,8 @@ def test_preview_announces_bound_port_serves_and_stops(tmp_path):
         process.send_signal(signal.SIGINT)
         output, errors = process.communicate(timeout=10)
         assert process.returncode == 0, errors
-        assert "Server stopped." in output
-        assert "Traceback" not in errors
+        assert b"Server stopped." in output
+        assert b"Traceback" not in errors
     finally:
         if process.poll() is None:
             process.kill()
