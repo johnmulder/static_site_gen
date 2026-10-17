@@ -12,6 +12,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+import markdown
 import yaml
 
 from .output import (
@@ -135,9 +136,12 @@ class SiteConfig:
             "markdown_extensions", ["codehilite", "tables", "toc"]
         )
         if not isinstance(markdown_extensions, list) or not all(
-            isinstance(extension, str) for extension in markdown_extensions
+            isinstance(extension, str) and extension.strip()
+            for extension in markdown_extensions
         ):
-            raise ValueError("markdown_extensions must be a list of strings")
+            raise ValueError(
+                "markdown_extensions must be a list of strings with nonempty names"
+            )
 
         return cls(
             site_name=raw["site_name"],
@@ -670,6 +674,11 @@ class SiteGenerator:
         self.load_config()
         if self.config is None:
             raise RuntimeError("Configuration failed to load")
+
+        try:
+            markdown.Markdown(extensions=self.config.markdown_extensions)
+        except Exception as exc:
+            raise ValueError(f"Invalid Markdown extension setup: {exc}") from exc
 
         output = validate_output_dir(
             self.project_root / self.config.output_dir, self.project_root

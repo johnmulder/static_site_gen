@@ -374,7 +374,11 @@ def parse_content_file(
 
     # Convert Markdown to HTML using configured extensions
     md = markdown.Markdown(
-        extensions=markdown_extensions or ["extra", "codehilite", "toc"]
+        extensions=(
+            ["extra", "codehilite", "toc"]
+            if markdown_extensions is None
+            else markdown_extensions
+        )
     )
     html_content = sanitize_html(md.convert(markdown_body))
 
