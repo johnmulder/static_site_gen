@@ -1,0 +1,18 @@
+include LICENSE Makefile config.yaml .gitignore .pre-commit-config.yaml
+include *.md
+recursive-include .github *.md *.yml *.yaml
+recursive-include static_site_gen *.py *.html *.xml
+recursive-include tests *.py *.md *.yaml
+recursive-include scripts *.py
+recursive-include templates *.html *.xml
+recursive-include content *.md
+recursive-include static *
+prune build
+prune dist
+prune site
+prune .venv
+prune .git
+prune .pytest_cache
+prune .mypy_cache
+prune .ruff_cache
+global-exclude __pycache__ *.py[cod] .DS_Store
