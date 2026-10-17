@@ -650,21 +650,20 @@ class SiteGenerator:
         )
 
         # Generate content
-        if posts:
-            logger.info("Generating post pages...")
-            self.generate_posts(posts)
+        logger.info("Generating post pages...")
+        self.generate_posts(posts)
 
-            logger.info("Generating index page...")
-            self.generate_index(posts)
+        logger.info("Generating index page...")
+        self.generate_index(posts)
 
-            logger.info("Generating tag pages...")
-            self.generate_tag_pages(posts)
+        logger.info("Generating tag pages...")
+        self.generate_tag_pages(posts)
 
-            logger.info("Generating tag index...")
-            self.generate_tag_index(posts)
+        logger.info("Generating tag index...")
+        self.generate_tag_index(posts)
 
-            logger.info("Generating RSS feed...")
-            self.generate_feed(posts)
+        logger.info("Generating RSS feed...")
+        self.generate_feed(posts)
 
         if pages:
             logger.info("Generating static pages...")
