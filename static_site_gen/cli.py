@@ -55,7 +55,7 @@ description: "About this site"
 
 # About
 
-This site was generated with [static-site-gen](https://github.com/example/static-site-gen).
+This site was generated with [static-site-gen](https://github.com/johnmulder/static_site_gen).
 """
 
 _DEFAULT_STYLE = """\
@@ -116,6 +116,11 @@ def cmd_serve(args: argparse.Namespace) -> int:
     import functools
     import http.server
 
+    port: int = args.port
+    if not 0 <= port <= 65535:
+        print("Error: Port must be between 0 and 65535.")
+        return 1
+
     try:
         project_root = Path(args.project_dir).resolve()
         config = SiteConfig.from_yaml(project_root / "config.yaml")
@@ -131,14 +136,19 @@ def cmd_serve(args: argparse.Namespace) -> int:
     handler = functools.partial(
         http.server.SimpleHTTPRequestHandler, directory=str(site_dir)
     )
-    port: int = args.port
-
-    print(f"Serving site at http://localhost:{port}/  (press Ctrl+C to stop)")
     try:
         with http.server.HTTPServer(("localhost", port), handler) as httpd:
+            print(
+                f"Serving site at http://localhost:{httpd.server_port}/  "
+                "(press Ctrl+C to stop)",
+                flush=True,
+            )
             httpd.serve_forever()
     except KeyboardInterrupt:
         print("\nServer stopped.")
+    except OSError as e:
+        print(f"Error serving site: {e}")
+        return 1
     return 0
 
 
@@ -152,13 +162,18 @@ def cmd_init(args: argparse.Namespace) -> int:
     Args:
         args: Parsed command-line arguments (expects ``project_name``)
     """
-    project_dir = Path(args.project_name).resolve()
-
-    if project_dir.exists() and any(project_dir.iterdir()):
-        print(f"Error: '{args.project_name}' already exists and is not empty")
-        return 1
-
     try:
+        project_dir = Path(args.project_name).resolve()
+        if project_dir.exists():
+            if not project_dir.is_dir():
+                print(
+                    f"Error: '{args.project_name}' already exists and is not a directory"
+                )
+                return 1
+            if any(project_dir.iterdir()):
+                print(f"Error: '{args.project_name}' already exists and is not empty")
+                return 1
+
         today = date.today().isoformat()
 
         # Directory skeleton
@@ -176,18 +191,24 @@ def cmd_init(args: argparse.Namespace) -> int:
             args.project_name, default_style='"', allow_unicode=True
         ).strip()
         config_text = _DEFAULT_CONFIG.format(site_name=site_name)
-        (project_dir / "config.yaml").write_text(config_text)
+        (project_dir / "config.yaml").write_text(config_text, encoding="utf-8")
 
         # Sample content
         first_post = _DEFAULT_FIRST_POST.format(today=today)
         filename = f"{today}-hello-world.md"
-        (project_dir / "content" / "posts" / filename).write_text(first_post)
+        (project_dir / "content" / "posts" / filename).write_text(
+            first_post, encoding="utf-8"
+        )
 
         about_page = _DEFAULT_ABOUT_PAGE.format(today=today)
-        (project_dir / "content" / "pages" / "about.md").write_text(about_page)
+        (project_dir / "content" / "pages" / "about.md").write_text(
+            about_page, encoding="utf-8"
+        )
 
         # Stylesheet
-        (project_dir / "static" / "style.css").write_text(_DEFAULT_STYLE)
+        (project_dir / "static" / "style.css").write_text(
+            _DEFAULT_STYLE, encoding="utf-8"
+        )
 
         source_templates = resources.files("static_site_gen.resources").joinpath(
             "templates"
@@ -259,7 +280,7 @@ def create_parser() -> argparse.ArgumentParser:
         "--port",
         type=int,
         default=8000,
-        help="Port to serve on (default: 8000)",
+        help="Port to serve on; 0 selects an available port (default: 8000)",
     )
     serve_parser.set_defaults(func=cmd_serve)
 
