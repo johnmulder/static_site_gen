@@ -14,8 +14,8 @@ The package emphasizes simplicity and maintainability while providing
 the core functionality needed for a personal blog site.
 """
 
-__version__ = "0.1.0"
+from .. import __version__
+
 __author__ = "John Mulder"
 
-# Main package exports will be defined as implementation progresses
-__all__ = []
+__all__ = ["__version__"]

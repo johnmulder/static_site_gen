@@ -5,7 +5,9 @@ This package provides functionality to convert Markdown files with YAML front ma
 into a clean HTML blog with template-based rendering.
 """
 
-__version__ = "0.1.0"
+from importlib.metadata import version
+
+__version__ = version("static-site-gen")
 __author__ = "John Mulder"
 
 from .cli import main
