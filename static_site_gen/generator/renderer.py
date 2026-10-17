@@ -10,6 +10,8 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
+from .output import generate_page_url, generate_post_url, generate_tag_url
+
 
 class TemplateRenderer:
     """
@@ -39,6 +41,11 @@ class TemplateRenderer:
             autoescape=True,  # Security: auto-escape HTML
             trim_blocks=True,  # Clean whitespace handling
             lstrip_blocks=True,
+        )
+        self.env.filters.update(
+            page_url=generate_page_url,
+            post_url=generate_post_url,
+            tag_url=generate_tag_url,
         )
 
     def render_template(self, template_name: str, context: dict[str, Any]) -> str:

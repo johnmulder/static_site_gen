@@ -5,18 +5,18 @@
     </url>
     {% for post in posts %}
     <url>
-        <loc>{{ site.base_url }}/posts/{{ post.slug }}/</loc>
+        <loc>{{ site.base_url }}{{ post.slug | post_url }}</loc>
         <lastmod>{{ post.date.strftime('%Y-%m-%d') }}</lastmod>
     </url>
     {% endfor %}
     {% for page in pages %}
     <url>
-        <loc>{{ site.base_url }}/{{ page.slug }}/</loc>
+        <loc>{{ site.base_url }}{{ page.slug | page_url }}</loc>
     </url>
     {% endfor %}
     {% for tag in tags %}
     <url>
-        <loc>{{ site.base_url }}/tag/{{ tag }}/</loc>
+        <loc>{{ site.base_url }}{{ tag | tag_url }}</loc>
     </url>
     {% endfor %}
 </urlset>
