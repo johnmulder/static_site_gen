@@ -24,6 +24,9 @@
 1. **Index Generation**: Build homepage from sorted post list
 1. **Tag Pages**: Generate `/tag/<tag>/` pages from tag index
 1. **Static Assets**: Copy `static/` to `site/static/`
+1. **Publication**: Generate in a sibling temporary directory, then replace the
+   previous output after rendering and writes succeed. Reject output paths that
+   overlap source inputs before creating the staging directory.
 
 ### Template System
 
@@ -68,7 +71,7 @@ python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install in development mode
-pip install -e .[dev]
+pip install -e '.[dev]'
 ```
 
 ### Running Tests
@@ -92,7 +95,7 @@ ruff format --check .
 ruff check .
 
 # Type checking
-mypy static_site_gen
+mypy static_site_gen tests scripts
 
 # Format Markdown
 mdformat README.md DEVELOPMENT.md
@@ -100,26 +103,24 @@ mdformat README.md DEVELOPMENT.md
 
 ### Post-Implementation Checklist
 
-Run this sequence before opening or updating a pull request:
+Run the same noninteractive acceptance gate locally and in CI:
 
 ```bash
-# 1) Tests
-pytest
-
-# 2) Quality checks
-ruff check .
-ruff format --check .
-mypy static_site_gen
-
-# 3) Pre-commit hooks
-pre-commit run --all-files
+make check
 ```
 
 Expected result: all commands pass with no file changes required.
 
+The gate runs lint, format and type checks, tests with at least 95% coverage,
+pre-commit hooks, and wheel/sdist installation checks in fresh temporary
+environments. It uses no manual browser preview or approval step. Installing
+development dependencies and initial pre-commit environments requires network
+access. CI checks Python 3.12, 3.13, and 3.14. See [MERGE_PLAN.md](MERGE_PLAN.md)
+for the current branch's completion record.
+
 ### Testing Coverage
 
-Coverage is enforced in CI and should not regress.
+The 95% coverage floor is enforced by `make test` and `make check` locally and in CI.
 
 Key test areas:
 
@@ -152,8 +153,7 @@ static_site_gen/
 ├── site/                        # Generated output (git-ignored)
 ├── tests/                       # Test suite
 ├── config.yaml                  # Site configuration
-├── pyproject.toml              # Python project configuration
-└── pyproject.toml              # Package and dependency configuration
+└── pyproject.toml              # Package and tool configuration
 ```
 
 ## Configuration Options
@@ -193,12 +193,14 @@ markdown_extensions:              # Additional Markdown extensions
 
 - Missing or invalid `config.yaml`
 - Template directory not found
-- Invalid YAML front matter syntax
+- Invalid configuration YAML
+- Template rendering or output write failures (the previous generated site is
+  preserved)
 
 ### Graceful Handling
 
-- Missing optional front matter fields (logs warning, continues)
-- Invalid dates (skips post or uses filename date)
+- Missing optional front matter fields (uses defaults)
+- Invalid front matter, dates, or metadata types (logs and skips the content file)
 - Missing static files
 
 ### Error Message Format
@@ -213,8 +215,7 @@ Error in content/posts/my-post.md: Missing required field 'date'
 1. Create a feature branch (`git checkout -b feature/amazing-feature`)
 1. Make your changes
 1. Add tests for new functionality
-1. Ensure all tests pass (`pytest`)
-1. Run code quality checks (`ruff check .`, `ruff format --check .`, `mypy static_site_gen`)
+1. Run all acceptance checks (`make check`)
 1. Commit your changes (`git commit -m 'Add amazing feature'`)
 1. Push to the branch (`git push origin feature/amazing-feature`)
 1. Open a Pull Request

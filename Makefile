@@ -1,22 +1,32 @@
-.PHONY: lint test build format serve clean help
+.PHONY: check lint test coverage hooks check-package build format serve clean help
 
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 lint: ## Run linting and type checks
-	ruff check static_site_gen/ tests/
-	ruff format --check static_site_gen/ tests/
-	mypy static_site_gen/ tests/
+	ruff check .
+	ruff format --check .
+	mypy static_site_gen/ tests/ scripts/
+
+check: lint test hooks check-package ## Run all merge acceptance checks without prompts
 
 format: ## Format code with Ruff
 	ruff format static_site_gen/ tests/
 	ruff check --fix static_site_gen/ tests/
 
 test: ## Run test suite
-	pytest
+	pytest --cov-fail-under=95
 
-coverage: ## Run tests with coverage report
-	pytest --cov=static_site_gen --cov-report=term-missing
+coverage: test ## Run tests with coverage report and the CI coverage floor
+
+hooks: ## Check all tracked files with pre-commit
+	pre-commit run --all-files
+
+check-package: ## Build and exercise isolated wheel and sdist installations
+	@artifact_dir=$$(mktemp -d) || exit 1; \
+	trap 'rm -rf "$$artifact_dir"' EXIT; \
+	python -m build --outdir "$$artifact_dir" && \
+	python scripts/check_installed_artifacts.py "$$artifact_dir"/*.whl "$$artifact_dir"/*.tar.gz
 
 build: ## Build the static site
 	python -m static_site_gen build

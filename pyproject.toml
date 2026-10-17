@@ -29,6 +29,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "build>=1.2,<2",
     "pytest>=8.3,<9",
     "pytest-cov>=6.0,<7",
     "ruff>=0.9,<1",
@@ -50,6 +51,9 @@ Issues = "https://github.com/johnmulder/static_site_gen/issues"
 
 [tool.setuptools.packages.find]
 include = ["static_site_gen*"]
+
+[tool.setuptools.package-data]
+"static_site_gen.resources" = ["templates/*.html", "templates/*.xml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

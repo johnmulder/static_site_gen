@@ -6,25 +6,25 @@ This module provides the CLI commands for building and managing static sites.
 
 import argparse
 import logging
-import shutil
 import sys
 from collections.abc import Callable
 from datetime import date
+from importlib import resources
 from pathlib import Path
 from typing import cast
 
 import yaml
-from jinja2 import TemplateNotFound
+from jinja2 import TemplateError
 
-from .generator.core import SiteGenerator
+from .generator.core import SiteConfig, SiteGenerator
+from .generator.output import validate_output_dir
 
 # ---------------------------------------------------------------------------
-# Default scaffolding content embedded as strings so ``init`` works without
-# needing to locate installed package data.
+# Default project content; templates are copied from packaged resources.
 # ---------------------------------------------------------------------------
 
 _DEFAULT_CONFIG = """\
-site_name: "{site_name}"
+site_name: {site_name}
 base_url: "https://example.com"
 author: "Your Name"
 description: "A new static site"
@@ -98,7 +98,7 @@ def cmd_build(args: argparse.Namespace) -> int:
     except ValueError as e:
         print(f"Configuration error: {e}")
         return 1
-    except (OSError, RuntimeError, yaml.YAMLError, TemplateNotFound) as e:
+    except (OSError, RuntimeError, yaml.YAMLError, TemplateError) as e:
         print(f"Build failed: {e}")
         return 1
 
@@ -116,8 +116,13 @@ def cmd_serve(args: argparse.Namespace) -> int:
     import functools
     import http.server
 
-    project_root = Path(args.project_dir).resolve()
-    site_dir = project_root / "site"
+    try:
+        project_root = Path(args.project_dir).resolve()
+        config = SiteConfig.from_yaml(project_root / "config.yaml")
+        site_dir = validate_output_dir(project_root / config.output_dir, project_root)
+    except (OSError, ValueError, yaml.YAMLError) as e:
+        print(f"Configuration error: {e}")
+        return 1
 
     if not site_dir.is_dir():
         print(f"Error: Output directory '{site_dir}' not found. Run 'build' first.")
@@ -141,9 +146,8 @@ def cmd_init(args: argparse.Namespace) -> int:
     """
     Scaffold a new static site project.
 
-    Creates the directory structure, default templates (copied from the
-    package's own templates/ directory when available, otherwise skipped),
-    sample content, configuration, and a minimal stylesheet.
+    Creates the directory structure, packaged templates, sample content,
+    configuration, and a minimal stylesheet.
 
     Args:
         args: Parsed command-line arguments (expects ``project_name``)
@@ -168,7 +172,10 @@ def cmd_init(args: argparse.Namespace) -> int:
             d.mkdir(parents=True, exist_ok=True)
 
         # Config
-        config_text = _DEFAULT_CONFIG.format(site_name=args.project_name)
+        site_name = yaml.safe_dump(
+            args.project_name, default_style='"', allow_unicode=True
+        ).strip()
+        config_text = _DEFAULT_CONFIG.format(site_name=site_name)
         (project_dir / "config.yaml").write_text(config_text)
 
         # Sample content
@@ -182,14 +189,14 @@ def cmd_init(args: argparse.Namespace) -> int:
         # Stylesheet
         (project_dir / "static" / "style.css").write_text(_DEFAULT_STYLE)
 
-        # Copy real templates from the package's sibling templates/ directory
-        # (works when running from a source checkout or editable install).
-        package_root = Path(__file__).resolve().parent.parent
-        source_templates = package_root / "templates"
-        if source_templates.is_dir():
-            for src in source_templates.iterdir():
-                if src.is_file():
-                    shutil.copy(src, project_dir / "templates" / src.name)
+        source_templates = resources.files("static_site_gen.resources").joinpath(
+            "templates"
+        )
+        for template in source_templates.iterdir():
+            if template.is_file():
+                (project_dir / "templates" / template.name).write_text(
+                    template.read_text(encoding="utf-8"), encoding="utf-8"
+                )
 
         print(f"Created new site project in '{args.project_name}'")
         print(f"  {project_dir}/")

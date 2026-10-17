@@ -5,12 +5,14 @@ These tests target specific uncovered areas in the build process,
 configuration loading, and error handling scenarios.
 """
 
+from argparse import Namespace
 from unittest.mock import Mock
 
 import pytest
 import yaml
 
-from static_site_gen.generator.core import SiteGenerator
+from static_site_gen.cli import cmd_build
+from static_site_gen.generator.core import SiteConfig, SiteGenerator
 
 
 class TestSiteGeneratorEdgeCases:
@@ -269,6 +271,75 @@ timezone: "Mars/Phobos"
         generator = SiteGenerator(tmp_path)
         with pytest.raises(ValueError, match="Invalid timezone setting"):
             generator.load_config()
+
+
+class TestConfigShapeValidation:
+    """Invalid configuration fails with a useful error and CLI status."""
+
+    @pytest.mark.parametrize(
+        "config", [42, True, "site_name base_url author", ["site_name", "base_url"]]
+    )
+    def test_non_mapping_configuration(self, tmp_path, capsys, config):
+        """Scalar and sequence documents fail validation without a traceback."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(yaml.safe_dump(config))
+
+        with pytest.raises(ValueError, match="must be a YAML mapping"):
+            SiteConfig.from_yaml(config_file)
+
+        assert cmd_build(Namespace(project_dir=str(tmp_path), drafts=False)) == 1
+        assert "Configuration must be a YAML mapping" in capsys.readouterr().out
+
+    @pytest.mark.parametrize(
+        "field, value, error",
+        [
+            ("posts_per_page", True, "positive integer"),
+            ("posts_per_page", False, "positive integer"),
+            ("timezone", None, "Invalid timezone setting"),
+            ("timezone", 123, "Invalid timezone setting"),
+            ("timezone", [], "Invalid timezone setting"),
+            ("timezone", {}, "Invalid timezone setting"),
+            ("timezone", "", "Invalid timezone setting"),
+            ("timezone", "   ", "Invalid timezone setting"),
+            ("timezone", "../UTC", "Invalid timezone setting"),
+            ("timezone", "/etc/localtime", "Invalid timezone setting"),
+            ("markdown_extensions", None, "must be a list of strings"),
+            ("markdown_extensions", "toc", "must be a list of strings"),
+            ("markdown_extensions", {"toc": True}, "must be a list of strings"),
+            ("markdown_extensions", ["toc", None], "must be a list of strings"),
+            ("markdown_extensions", ["toc", 123], "must be a list of strings"),
+        ],
+    )
+    def test_invalid_values_preserve_output_and_return_failure(
+        self, sample_project, sample_config, capsys, field, value, error
+    ):
+        """Documented option types are checked before the previous site changes."""
+        sample_config[field] = value
+        config_file = sample_project / "config.yaml"
+        config_file.write_text(yaml.safe_dump(sample_config))
+        previous_site = sample_project / "site" / "index.html"
+        previous_site.parent.mkdir()
+        previous_site.write_text("Previous site")
+
+        with pytest.raises(ValueError, match=error):
+            SiteConfig.from_yaml(config_file)
+
+        assert cmd_build(Namespace(project_dir=str(sample_project), drafts=False)) == 1
+        assert error in capsys.readouterr().out
+        assert previous_site.read_text() == "Previous site"
+
+    def test_optional_defaults_are_preserved(self, tmp_path):
+        """A minimal configuration retains the documented working defaults."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(
+            "site_name: Test\nbase_url: https://example.com\nauthor: Author\n"
+        )
+
+        config = SiteConfig.from_yaml(config_file)
+
+        assert config.timezone == "UTC"
+        assert config.posts_per_page == 10
+        assert config.markdown_extensions == ["codehilite", "tables", "toc"]
 
 
 class TestDiscoverContent:

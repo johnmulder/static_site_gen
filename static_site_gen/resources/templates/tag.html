@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Posts tagged "{{ tag }}" | {{ site.site_name }}{% endblock %}
+
+{% block content %}
+<section class="tag-archive">
+    <div class="page-header">
+        <h1>Posts tagged "{{ tag }}"</h1>
+        <p><a href="/" class="back-link">← Back to home</a></p>
+    </div>
+
+    {% if posts %}
+    <div class="post-listing">
+        {% for post in posts %}
+        <article class="post-item">
+            <h1 class="post-title">
+                <a href="{{ post.slug | post_url }}">{{ post.title }}</a>
+            </h1>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No posts found with tag "{{ tag }}".</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

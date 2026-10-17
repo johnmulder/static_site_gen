@@ -12,7 +12,7 @@
     {% if tags %}
     <div class="tag-listing">
         {% for tag, count in tags %}
-        <a href="/tag/{{ tag }}/" class="tag-badge">{{ tag }} ({{ count }})</a>
+        <a href="{{ tag | tag_url }}" class="tag-badge">{{ tag }} ({{ count }})</a>
         {% endfor %}
     </div>
     {% else %}

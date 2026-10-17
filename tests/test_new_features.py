@@ -4,23 +4,75 @@ Tests for new features: serve command, sitemap, tag index, drafts flag.
 Covers Phase 4.4-4.7 functionality added to the static site generator.
 """
 
-from unittest.mock import Mock
+from argparse import Namespace
+from unittest.mock import Mock, patch
 
-from static_site_gen.cli import cmd_serve, create_parser
+import pytest
+import yaml
+
+from static_site_gen.cli import cmd_init, cmd_serve, create_parser
 from static_site_gen.generator.core import SiteGenerator
 
 
 class TestServeCommand:
     """Tests for the 'serve' development server command."""
 
-    def test_serve_missing_site_dir(self, tmp_path):
+    def test_serve_missing_site_dir(self, sample_project, capsys):
         """Serve returns error when output directory does not exist."""
         args = Mock()
-        args.project_dir = str(tmp_path)
+        args.project_dir = str(sample_project)
         args.port = 8000
 
         exit_code = cmd_serve(args)
         assert exit_code == 1
+        assert "Run 'build' first." in capsys.readouterr().out
+
+    @pytest.mark.parametrize("output_dir", ["site", "artifacts/public"])
+    def test_serve_uses_configured_output(self, sample_project, output_dir, capsys):
+        """Serve selects the configured output and shuts down on Ctrl+C."""
+        config_path = sample_project / "config.yaml"
+        config = yaml.safe_load(config_path.read_text())
+        config["output_dir"] = output_dir
+        config_path.write_text(yaml.safe_dump(config))
+        site_dir = sample_project / output_dir
+        site_dir.mkdir(parents=True)
+        args = Namespace(project_dir=str(sample_project), port=9000)
+
+        with patch("http.server.HTTPServer") as server:
+            running = server.return_value.__enter__.return_value
+            running.serve_forever.side_effect = KeyboardInterrupt
+
+            assert cmd_serve(args) == 0
+
+        address, handler = server.call_args.args
+        assert address == ("localhost", 9000)
+        assert handler.keywords["directory"] == str(site_dir)
+        running.serve_forever.assert_called_once_with()
+        server.return_value.__exit__.assert_called_once()
+        assert "Server stopped." in capsys.readouterr().out
+
+    @pytest.mark.parametrize(
+        "configuration",
+        [None, "invalid: yaml: [", "site_name: Blog", "overlap"],
+    )
+    def test_serve_reports_invalid_configuration(
+        self, sample_project, configuration, capsys
+    ):
+        """Invalid or unsafe configuration returns an error before serving."""
+        config_path = sample_project / "config.yaml"
+        if configuration is None:
+            config_path.unlink()
+        elif configuration == "overlap":
+            config = yaml.safe_load(config_path.read_text())
+            config["output_dir"] = "content"
+            config_path.write_text(yaml.safe_dump(config))
+        else:
+            config_path.write_text(configuration)
+
+        with patch("http.server.HTTPServer") as server:
+            assert cmd_serve(Namespace(project_dir=str(sample_project), port=8000)) == 1
+        server.assert_not_called()
+        assert "Configuration error:" in capsys.readouterr().out
 
     def test_serve_parser_has_port_and_project_dir(self):
         """Serve subcommand accepts --port and --project-dir arguments."""
@@ -34,6 +86,17 @@ class TestServeCommand:
         parser = create_parser()
         args = parser.parse_args(["serve"])
         assert args.port == 8000
+
+
+@pytest.mark.parametrize("name", ['my "quoted" blog', "C:\\new-blog", "blog\nnext"])
+def test_init_serializes_project_name_as_yaml(tmp_path, name):
+    """Project names remain literal YAML strings and produce buildable sites."""
+    project = tmp_path / name
+    assert cmd_init(Namespace(project_name=str(project))) == 0
+    config = yaml.safe_load((project / "config.yaml").read_text())
+    assert config["site_name"] == str(project)
+    SiteGenerator(project).build()
+    assert (project / "site/index.html").is_file()
 
 
 class TestDraftsFlag:

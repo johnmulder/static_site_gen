@@ -7,6 +7,7 @@ static assets, and empty-site edge cases.
 """
 
 from pathlib import Path
+from xml.etree import ElementTree
 
 from static_site_gen.generator.core import SiteGenerator
 
@@ -26,6 +27,16 @@ def _build(project_root: Path) -> Path:
     generator = SiteGenerator(project_root)
     generator.build()
     return project_root / "site"
+
+
+def _assert_empty_post_outputs(site: Path) -> None:
+    """Empty sites still publish the homepage, tag index, and a valid RSS feed."""
+    assert "No posts yet." in (site / "index.html").read_text()
+    assert "No tags found." in (site / "tag/index.html").read_text()
+    feed = ElementTree.parse(site / "feed.xml").getroot()
+    assert feed.tag == "rss"
+    assert feed.find("channel/title") is not None
+    assert feed.findall("channel/item") == []
 
 
 class TestCompleteBuildPipeline:
@@ -296,13 +307,13 @@ class TestEmptyBuilds:
 
         site = _build(sample_project)
 
-        # Index should exist (even if empty of posts)
+        _assert_empty_post_outputs(site)
         assert (site / "about" / "index.html").exists()
 
     def test_build_with_no_content(self, sample_project):
         """Build succeeds with completely empty content directories."""
         site = _build(sample_project)
-        # Should not crash
+        _assert_empty_post_outputs(site)
         assert (site / "static" / "style.css").exists()
 
     def test_build_with_only_drafts(self, sample_project):
@@ -311,10 +322,18 @@ class TestEmptyBuilds:
         _write_post(
             posts_dir,
             "2025-10-17-draft.md",
-            '---\ntitle: "Only Draft"\ndate: 2025-10-17\ndraft: true\n---\n\nDraft.\n',
+            '---\ntitle: "Only Draft"\ndate: 2025-10-17\ndraft: true\ntags: [private-draft]\n---\n\nPrivate draft body.\n',
         )
 
         site = _build(sample_project)
+        _assert_empty_post_outputs(site)
         assert not (site / "posts" / "only-draft" / "index.html").exists()
+        assert not (site / "tag/private-draft/index.html").exists()
+        for output in site.rglob("*"):
+            if output.is_file():
+                text = output.read_text()
+                assert "Only Draft" not in text
+                assert "Private draft body." not in text
+                assert "private-draft" not in text
         # Static assets still copied
         assert (site / "static" / "style.css").exists()

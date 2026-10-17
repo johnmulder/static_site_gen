@@ -95,27 +95,23 @@ def extract_front_matter(content: str, filepath: Path) -> tuple[dict[str, Any], 
     Raises:
         ParseError: If front matter is malformed or missing
     """
-    if not content.startswith("---"):
+    lines = content.splitlines(keepends=True)
+    if not lines or lines[0].rstrip() != "---":
         raise ParseError(
             "Missing YAML front matter (content must start with '---')", filepath
         )
     try:
-        # Split on second occurrence of ---
-        parts = content.split("---", 2)
-        if len(parts) < 3:
+        closing_line = next(
+            (index for index in range(1, len(lines)) if lines[index].rstrip() == "---"),
+            None,
+        )
+        if closing_line is None:
             raise ParseError(
                 "Malformed YAML front matter (missing closing '---')", filepath
             )
 
-        # Check if we have both opening and closing delimiters
-        if parts[1].strip() == "" and len(parts) == 3:
-            # Handle case where content is just "---\n---"
-            pass
-        elif not parts[2]:
-            # No content after second ---
-            pass
-
-        _, front_matter_raw, markdown_body = parts
+        front_matter_raw = "".join(lines[1:closing_line])
+        markdown_body = "".join(lines[closing_line + 1 :])
 
         try:
             front_matter = yaml.safe_load(front_matter_raw.strip())
@@ -123,6 +119,9 @@ def extract_front_matter(content: str, filepath: Path) -> tuple[dict[str, Any], 
                 front_matter = {}
         except yaml.YAMLError as e:
             raise ParseError(f"Invalid YAML syntax: {e}", filepath) from e
+
+        if not isinstance(front_matter, dict):
+            raise ParseError("YAML front matter must be a mapping", filepath)
 
         return front_matter, markdown_body.strip()
 
@@ -299,6 +298,8 @@ def _extract_optional_fields(
     tags = front_matter.get("tags", [])
     if not isinstance(tags, list):
         raise ParseError("Field 'tags' must be a list", filepath)
+    if not all(isinstance(tag, str) for tag in tags):
+        raise ParseError("Field 'tags' must contain only strings", filepath)
 
     draft = front_matter.get("draft", False)
     if not isinstance(draft, bool):
@@ -354,6 +355,8 @@ def parse_content_file(
 
     # Generate slug if not provided
     slug = front_matter.get("slug")
+    if slug is not None and not isinstance(slug, str):
+        raise ParseError("Field 'slug' must be a string", filepath)
     if not slug:
         slug = generate_slug(front_matter["title"])
 

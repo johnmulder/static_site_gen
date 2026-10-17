@@ -64,6 +64,9 @@ author: "Test Author"
 """
             )
 
+            (temp_path / "templates" / "sitemap.xml").write_text("<urlset/>")
+            (temp_path / "templates" / "tag_index.html").write_text("No tags")
+            (temp_path / "templates" / "feed.xml").write_text("<rss/>")
             with (
                 patch("sys.argv", ["cli.py", "build"]),
                 patch("os.getcwd", return_value=str(temp_path)),
@@ -130,6 +133,9 @@ author: "Test Author"
 """
             )
 
+            (temp_path / "templates" / "sitemap.xml").write_text("<urlset/>")
+            (temp_path / "templates" / "tag_index.html").write_text("No tags")
+            (temp_path / "templates" / "feed.xml").write_text("<rss/>")
             args = Mock()
             args.project_dir = str(temp_path)
 

@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+from static_site_gen.generator.core import SiteGenerator
 from static_site_gen.generator.parser import (
     ContentMetadata,
     ParsedContent,
@@ -111,6 +112,81 @@ class TestExtractFrontMatter:
 
         with pytest.raises(ParseError, match="Invalid YAML syntax"):
             extract_front_matter(content, filepath)
+
+    def test_delimiters_inside_metadata_and_body(self, tmp_path):
+        """Only unindented delimiter lines end the metadata block."""
+        content = (
+            '---\r\ntitle: "Before --- After"\r\ndate: 2025-10-17\r\n'
+            "description: |\r\n  ---\r\n  Description\r\n---\r\n"
+            "Body keeps --- inline.\r\n\r\n---\r\n\r\nAfter the break."
+        )
+
+        front_matter, body = extract_front_matter(content, tmp_path / "test.md")
+
+        assert front_matter["title"] == "Before --- After"
+        assert front_matter["description"] == "---\nDescription"
+        assert body == "Body keeps --- inline.\r\n\r\n---\r\n\r\nAfter the break."
+
+    @pytest.mark.parametrize("opening", ["----", "---title: Test"])
+    def test_opening_requires_a_delimiter_line(self, tmp_path, opening):
+        """An inline prefix does not start a front matter block."""
+        with pytest.raises(ParseError, match="Missing YAML front matter"):
+            extract_front_matter(f"{opening}\ndate: 2025-10-17\n---", tmp_path)
+
+    def test_inline_dashes_do_not_close_front_matter(self, tmp_path):
+        """A title containing dashes cannot replace the closing delimiter."""
+        with pytest.raises(ParseError, match="Malformed YAML front matter"):
+            extract_front_matter('---\ntitle: "Before --- After"', tmp_path)
+
+
+@pytest.mark.parametrize(
+    "front_matter, error",
+    [
+        ("42", "must be a mapping"),
+        ("true", "must be a mapping"),
+        ("- title\n- date", "must be a mapping"),
+        ("title: Bad\ndate: 2025-10-17\ntags: [123]", "only strings"),
+        ("title: Bad\ndate: 2025-10-17\ntags: [null]", "only strings"),
+        ("title: Bad\ndate: 2025-10-17\ntags: [{name: test}]", "only strings"),
+        ("title: Bad\ndate: 2025-10-17\nslug: 123", "'slug' must be a string"),
+        ("title: Bad\ndate: 2025-10-17\nslug: 0", "'slug' must be a string"),
+        ("title: Bad\ndate: 2025-10-17\nslug: false", "'slug' must be a string"),
+        ("title: Bad\ndate: 2025-10-17\nslug: []", "'slug' must be a string"),
+        ("title: Bad\ndate: 2025-10-17\nslug: {}", "'slug' must be a string"),
+    ],
+)
+def test_invalid_metadata_is_logged_and_skipped(
+    sample_project, caplog, front_matter, error
+):
+    """Malformed metadata cannot prevent valid neighboring posts from building."""
+    posts = sample_project / "content" / "posts"
+    invalid = posts / "invalid.md"
+    invalid.write_text(f"---\n{front_matter}\n---\nInvalid post body.")
+    valid = posts / "valid.md"
+    valid.write_text(
+        '---\ntitle: "Before --- After"\ndate: 2025-10-17\n---\nValid post body.'
+    )
+
+    with pytest.raises(ParseError, match=error):
+        parse_content_file(invalid)
+
+    SiteGenerator(sample_project).build()
+
+    output = sample_project / "site"
+    assert (output / "posts" / "before-after" / "index.html").is_file()
+    assert "Before --- After" in (output / "index.html").read_text()
+    assert not (output / "posts" / "bad").exists()
+    assert str(invalid) in caplog.text
+    assert "Error processing post" in caplog.text
+
+
+@pytest.mark.parametrize("slug_field", ["", "slug: null\n", 'slug: ""\n'])
+def test_missing_or_empty_slug_generates_from_title(tmp_path, slug_field):
+    """Optional null and empty slugs retain automatic title-based generation."""
+    post = tmp_path / "post.md"
+    post.write_text(f"---\ntitle: Test Post\ndate: 2025-10-17\n{slug_field}---\nBody")
+
+    assert parse_content_file(post).metadata.slug == "test-post"
 
 
 class TestValidateFrontMatter:
