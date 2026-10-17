@@ -80,6 +80,8 @@ class SiteConfig:
 
         if raw is None:
             raise ValueError("Configuration file is empty or invalid")
+        if not isinstance(raw, dict):
+            raise ValueError("Configuration must be a YAML mapping")
 
         required_fields = ["site_name", "base_url", "author"]
         missing = [f for f in required_fields if f not in raw]
@@ -99,7 +101,11 @@ class SiteConfig:
             raise ValueError(f"Invalid required config fields: {', '.join(invalid)}")
 
         posts_per_page = raw.get("posts_per_page", 10)
-        if not isinstance(posts_per_page, int) or posts_per_page <= 0:
+        if (
+            not isinstance(posts_per_page, int)
+            or isinstance(posts_per_page, bool)
+            or posts_per_page <= 0
+        ):
             raise ValueError(
                 f"posts_per_page must be a positive integer, got: {posts_per_page}"
             )
@@ -111,9 +117,11 @@ class SiteConfig:
             )
 
         timezone = raw.get("timezone", "UTC")
+        if not isinstance(timezone, str) or not timezone.strip():
+            raise ValueError(f"Invalid timezone setting: {timezone}")
         try:
             ZoneInfo(timezone)
-        except ZoneInfoNotFoundError as exc:
+        except (ZoneInfoNotFoundError, ValueError) as exc:
             raise ValueError(f"Invalid timezone setting: {timezone}") from exc
 
         output_dir = raw.get("output_dir", "site")
@@ -121,6 +129,14 @@ class SiteConfig:
             raise ValueError("output_dir must be a nonempty relative directory name")
         if Path(output_dir).is_absolute():
             raise ValueError("output_dir must be relative to the project root")
+
+        markdown_extensions = raw.get(
+            "markdown_extensions", ["codehilite", "tables", "toc"]
+        )
+        if not isinstance(markdown_extensions, list) or not all(
+            isinstance(extension, str) for extension in markdown_extensions
+        ):
+            raise ValueError("markdown_extensions must be a list of strings")
 
         return cls(
             site_name=raw["site_name"],
@@ -131,9 +147,7 @@ class SiteConfig:
             posts_per_page=posts_per_page,
             description=raw.get("description", ""),
             keywords=raw.get("keywords", []),
-            markdown_extensions=raw.get(
-                "markdown_extensions", ["codehilite", "tables", "toc"]
-            ),
+            markdown_extensions=markdown_extensions,
         )
 
 
