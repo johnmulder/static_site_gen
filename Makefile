@@ -1,4 +1,4 @@
-.PHONY: check lint test coverage hooks check-package build format serve clean help
+.PHONY: check lint test coverage hooks check-package release-check build format serve clean help
 
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -26,7 +26,12 @@ check-package: ## Build and exercise isolated wheel and sdist installations
 	@artifact_dir=$$(mktemp -d) || exit 1; \
 	trap 'rm -rf "$$artifact_dir"' EXIT; \
 	python -m build --outdir "$$artifact_dir" && \
-	python scripts/check_installed_artifacts.py "$$artifact_dir"/*.whl "$$artifact_dir"/*.tar.gz
+	python -m twine check --strict "$$artifact_dir"/*.whl "$$artifact_dir"/*.tar.gz && \
+	python scripts/check_installed_artifacts.py "$$artifact_dir"/*.whl "$$artifact_dir"/*.tar.gz && \
+	python scripts/check_source_distribution.py "$$artifact_dir"/*.tar.gz
+
+release-check: ## Retain a verified alpha bundle from the current clean commit
+	python scripts/release.py check
 
 build: ## Build the static site
 	python -m static_site_gen build

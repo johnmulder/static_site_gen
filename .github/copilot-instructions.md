@@ -10,7 +10,7 @@ existing architecture and prefer the smallest maintainable change.
   are `tags` (list), `draft` (boolean), `description` (string), and `slug`.
   Preserve timezone-aware dates, Unicode slug support, and collision handling.
 - Configuration requires nonempty `site_name`, `base_url`, and `author` strings.
-  Keep absolute HTTP/HTTPS URL, IANA timezone, and positive `posts_per_page`
+  Keep root-only absolute HTTP/HTTPS URL, IANA timezone, and positive `posts_per_page`
   validation.
 - Posts use `/posts/<slug>/`, pages `/<slug>/`, and tags `/tag/<tag>/`, each
   backed by `index.html`. Preserve URL encoding, newest-first post ordering,
@@ -52,14 +52,18 @@ With the development environment activated, the existing checks are:
 make lint
 make test
 make check
+make release-check
 ```
 
 `make lint` runs Ruff and its format check across the repository, and mypy on
 the package, tests, and scripts. `make test` runs pytest with a 95% coverage floor.
 `make check` also runs pre-commit and isolated wheel/sdist scaffold/build checks.
-The [CI workflow](workflows/ci.yml) runs the same complete gate on Python 3.12,
-3.13, and 3.14. Development extras include all required tools; the complete gate
-requires no manual preview or approval.
+The [CI workflow](workflows/ci.yml) runs the same complete gate on Linux Python
+3.12, 3.13, and 3.14, with a macOS 3.14 check. Development extras include all
+required tools; the complete gate requires no manual preview or approval.
+`make release-check` requires a clean commit and retains the exact verified
+artifacts, hashes, runtime dependency audits, and provenance. Release preparation
+uses an unpublished GitHub draft; public publication is a separate explicit mode.
 
 For behavior changes, preserve relevant parser, renderer, URL/security, and
 temporary-directory integration regressions. For prose-only changes, check the
