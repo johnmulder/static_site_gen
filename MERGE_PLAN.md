@@ -12,13 +12,14 @@ preview, review sign-off, credential setup, release, or deployment required.
 - [x] Reject malformed metadata with diagnostics while continuing valid content.
 - [x] Make the CLI preview the configured output directory and safely scaffold names.
 - [x] Validate configuration types with actionable errors.
-- [ ] Use canonical encoded URLs in generated links, feeds, and sitemaps.
-- [ ] Generate the homepage, tags index, and empty feed without published posts.
-- [ ] Correct development guidance and provide one noninteractive acceptance gate.
-- [ ] Run `make check`: Ruff, formatting, mypy, pytest with at least 95% coverage,
+- [x] Use canonical encoded URLs in generated links, feeds, and sitemaps.
+- [x] Generate the homepage, tags index, and empty feed without published posts.
+- [x] Correct development guidance and provide one noninteractive acceptance gate.
+- [x] Run `make check`: Ruff, formatting, mypy, pytest with at least 95% coverage,
   pre-commit, and isolated wheel and sdist scaffold/build checks. CI runs this
   same gate on Python 3.12, 3.13, and 3.14.
-- [ ] Commit each major completed change with a one-line message.
+- [x] Commit each major completed change with a one-line message.
+- [ ] Confirm CI passes on all three supported Python versions.
 - [ ] Refresh `origin/main`, integrate any changes, and repeat affected checks.
 - [ ] Merge into `main`, push `main`, and delete the merged feature branch locally
   and on `origin`. Verify that the working tree is clean and branches agree.
@@ -35,5 +36,8 @@ pre-commit. Review identified an output cleanup guard regression, restrictive
 published-directory permissions, malformed metadata escaping the skip contract,
 CLI preview ignoring custom output paths, malformed configuration escaping
 validation, unencoded template URLs, and missing root pages for empty sites.
-The work above resolves those
-concrete gaps without adding speculative features.
+The work above resolves those concrete gaps without adding speculative features.
+
+Local acceptance passed on Python 3.14.8: 285 tests, 97.42% coverage, Ruff,
+formatting, mypy, every pre-commit hook, and independent wheel/sdist installed
+scaffold/build checks. The full `make check` gate exited successfully.
