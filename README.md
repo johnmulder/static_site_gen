@@ -28,7 +28,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e .
 
 # Optional: install development tools
-pip install -e .[dev]
+pip install -e '.[dev]'
 ```
 
 ### Create Your First Post
@@ -177,6 +177,9 @@ the project root, paths outside it, and paths overlapping content, templates,
 static assets, configuration, Git metadata, or this package's source. These checks
 use resolved paths, including symlink targets.
 
+The existing cleanup guards also reject output containing shell configuration
+files or `Desktop`/`Documents` directories.
+
 Generation happens in a temporary sibling directory. A rendering or write failure
 returns a nonzero status and preserves the previous site. A successful build
 replaces the output directory, removing obsolete generated files.
@@ -184,7 +187,7 @@ replaces the output directory, removing obsolete generated files.
 ### Initialize New Project
 
 ```bash
-python -m static_site_gen init
+python -m static_site_gen init my-blog
 ```
 
 Creates a new site with sample content, templates, and configuration.
@@ -195,8 +198,8 @@ Creates a new site with sample content, templates, and configuration.
 # Build your site
 python -m static_site_gen build
 
-# Start local server
-python -m http.server -d site
+# Start local server using the configured output_dir
+python -m static_site_gen serve
 
 # Open http://localhost:8000 in your browser
 ```
@@ -238,21 +241,18 @@ your-blog/
 ## Development Quality Checks
 
 ```bash
-ruff check .
-ruff format --check .
-mypy static_site_gen
-pytest --cov=static_site_gen --cov-report=term-missing
+make check
 ```
 
-CI also builds both distributions and checks each in its own fresh environment
-on Python 3.12, 3.13, and 3.14. The installed CLI must scaffold and build a sample
+After installing `.[dev]`, this noninteractive gate runs Ruff, formatting, mypy,
+pytest with a 95% coverage floor, pre-commit, and installed-package checks.
+CI runs the same gate on Python 3.12, 3.13, and 3.14. Each wheel and sdist is
+installed in a fresh environment, where the CLI must scaffold and build a sample
 site with its packaged templates, pages, tag archives, feed, sitemap, and CSS.
-To run the same artifact check after installing the build tool:
+Package checks can also run separately:
 
 ```bash
-python -m pip install build
-python -m build
-python scripts/check_installed_artifacts.py dist/*.whl dist/*.tar.gz
+make check-package
 ```
 
 For detailed development information, see [DEVELOPMENT.md](DEVELOPMENT.md).

@@ -29,7 +29,8 @@ existing architecture and prefer the smallest maintainable change.
   or user-submitted HTML without revisiting that trust boundary.
 - Preserve decoded URL traversal and separator checks, resolved-path containment
   within the selected output directory, and output cleanup guards.
-- Builds remove and recreate the configured output directory (default `site/`).
+- Builds generate in a temporary sibling directory and replace the configured
+  output directory (default `site/`) only after all rendering and writes succeed.
   Use temporary project/output directories in tests and avoid deleting content,
   templates, or user files during verification.
 
@@ -50,12 +51,15 @@ With the development environment activated, the existing checks are:
 ```bash
 make lint
 make test
+make check
 ```
 
-`make lint` runs Ruff, its format check, and mypy on the package and tests.
-`make test` runs pytest with coverage reporting. The
-[CI workflow](workflows/ci.yml) additionally enforces 95% coverage on Python
-3.12, 3.13, and 3.14; that floor is not implicit in the local test target.
+`make lint` runs Ruff and its format check across the repository, and mypy on
+the package, tests, and scripts. `make test` runs pytest with a 95% coverage floor.
+`make check` also runs pre-commit and isolated wheel/sdist scaffold/build checks.
+The [CI workflow](workflows/ci.yml) runs the same complete gate on Python 3.12,
+3.13, and 3.14. Development extras include all required tools; the complete gate
+requires no manual preview or approval.
 
 For behavior changes, preserve relevant parser, renderer, URL/security, and
 temporary-directory integration regressions. For prose-only changes, check the

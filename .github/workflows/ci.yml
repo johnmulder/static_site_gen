@@ -26,22 +26,5 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[dev]
 
-      - name: Ruff
-        run: ruff check .
-
-      - name: Ruff format
-        run: ruff format --check .
-
-      - name: Mypy
-        run: mypy static_site_gen/ tests/
-
-      - name: Pytest
-        run: pytest --cov=static_site_gen --cov-report=term-missing --cov-fail-under=95
-
-      - name: Build wheel and sdist
-        run: |
-          python -m pip install build
-          python -m build
-
-      - name: Check installed artifacts
-        run: python scripts/check_installed_artifacts.py dist/*.whl dist/*.tar.gz
+      - name: Check merge acceptance
+        run: make check
