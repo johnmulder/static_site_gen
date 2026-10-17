@@ -19,15 +19,16 @@ preview, review sign-off, credential setup, release, or deployment required.
   pre-commit, and isolated wheel and sdist scaffold/build checks. CI runs this
   same gate on Python 3.12, 3.13, and 3.14.
 - [x] Commit each major completed change with a one-line message.
-- [ ] Confirm CI passes on all three supported Python versions.
-- [ ] Refresh `origin/main`, integrate any changes, and repeat affected checks.
-- [ ] Merge into `main`, push `main`, and delete the merged feature branch locally
+- [x] Confirm CI passes on all three supported Python versions.
+- [x] Refresh `origin/main`, integrate any changes, and repeat affected checks.
+- [x] Merge into `main`, push `main`, and delete the merged feature branch locally
   and on `origin`. Verify that the working tree is clean and branches agree.
 
 Use temporary projects for build verification. Failed checks require a fix and
-another affected check, rather than a human waiver. Git operations must stop on
-conflicts or rejected pushes rather than overwrite unrelated work. Publishing a
-release and deploying a site are outside this merge plan.
+another affected check, rather than a human waiver. Resolve conflicts using the
+repository contracts and rerun affected checks. A rejected push requires fetching,
+integrating, and verifying new changes while preserving unrelated work.
+Publishing a release and deploying a site are outside this merge plan.
 
 ## Evaluation
 
@@ -41,3 +42,10 @@ The work above resolves those concrete gaps without adding speculative features.
 Local acceptance passed on Python 3.14.8: 285 tests, 97.42% coverage, Ruff,
 formatting, mypy, every pre-commit hook, and independent wheel/sdist installed
 scaffold/build checks. The full `make check` gate exited successfully.
+
+[CI run 39075850391](https://github.com/johnmulder/static_site_gen/actions/runs/39075850391)
+passed the complete gate on Python 3.12, 3.13, and 3.14 for feature commit
+`e9b39a1`. The branch merged without conflicts as `bdec92d`; `main` was pushed,
+and `codex-agent-guide-cleanup` was deleted both locally and on `origin`.
+The working tree was clean and `main` agreed with `origin/main` after cleanup.
+All planned implementation and merge work is complete.
