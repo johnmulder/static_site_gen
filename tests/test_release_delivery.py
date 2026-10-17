@@ -655,6 +655,23 @@ def test_github_does_not_retry_authorization_failure(monkeypatch):
     pause.assert_not_called()
 
 
+def test_binary_asset_download_preserves_escape_bytes(monkeypatch):
+    payload = b"PK\x03\x04\x1b[31mcompressed artifact\x00\xff"
+    transport = Mock(
+        side_effect=[
+            subprocess.CompletedProcess(
+                [], 1, b"", b"pass --allow-escape-sequences to output it anyway"
+            ),
+            subprocess.CompletedProcess([], 0, payload, b""),
+        ]
+    )
+    monkeypatch.setattr(delivery.subprocess, "run", transport)
+
+    assert delivery.GitHub().download({"id": 17}) == payload
+    assert "--allow-escape-sequences" not in transport.call_args_list[0].args[0]
+    assert "--allow-escape-sequences" in transport.call_args_list[1].args[0]
+
+
 def test_github_stops_after_bounded_transient_retries(monkeypatch):
     transport = Mock(
         return_value=subprocess.CompletedProcess(

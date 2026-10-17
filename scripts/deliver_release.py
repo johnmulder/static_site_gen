@@ -53,15 +53,21 @@ class GitHub:
         return json.loads(self._call(args, data))
 
     def download(self, asset: dict) -> bytes:
-        return self._call(
-            [
-                "gh",
-                "api",
-                "-H",
-                "Accept: application/octet-stream",
-                f"repos/{REPOSITORY}/releases/assets/{asset['id']}",
-            ]
-        )
+        args = [
+            "gh",
+            "api",
+            "-H",
+            "Accept: application/octet-stream",
+            f"repos/{REPOSITORY}/releases/assets/{asset['id']}",
+        ]
+        try:
+            return self._call(args)
+        except GitHubError as exc:
+            if "--allow-escape-sequences" not in str(exc):
+                raise
+            # New gh versions guard terminal escapes even with captured output.
+            # Distribution bytes are captured and hashed, never displayed.
+            return self._call(args[:2] + ["--allow-escape-sequences"] + args[2:])
 
     def upload(self, release: dict, path: Path) -> dict:
         url = release["upload_url"].split("{", 1)[0]
