@@ -6,12 +6,15 @@ from URL patterns, writing rendered content, copying static assets, and
 organizing posts for pagination and tag archives.
 """
 
+import logging
 import shutil
 import tempfile
 import urllib.parse
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 def validate_route_value(value: str) -> None:
@@ -24,6 +27,13 @@ def validate_route_value(value: str) -> None:
         raise ValueError(f"Whitespace around route segment: {value!r}")
     if any(ord(character) < 32 or ord(character) == 127 for character in value):
         raise ValueError(f"Control character in route value: {value!r}")
+    for part in value.split("/"):
+        try:
+            encoded = part.encode("utf-8")
+        except UnicodeEncodeError as exc:
+            raise ValueError(f"Route is not valid UTF-8: {value!r}") from exc
+        if len(encoded) > 255:
+            raise ValueError(f"Route segment exceeds 255 UTF-8 bytes: {value!r}")
 
 
 def validate_output_routes(
@@ -305,7 +315,12 @@ def publish_output(staged: Path, output: Path) -> None:
         except OSError as exc:
             raise RuntimeError(f"Previous site remains available at {backup}") from exc
         raise
-    shutil.rmtree(backup)
+    try:
+        shutil.rmtree(backup)
+    except OSError as exc:
+        logger.warning(
+            "New site published; could not remove previous site at %s: %s", backup, exc
+        )
 
 
 def paginate_posts(

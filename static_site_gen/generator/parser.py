@@ -58,7 +58,9 @@ class ContentMetadata:
         if self.tags is None:
             self.tags = []
         else:
-            self.tags = [tag.lower().strip() for tag in self.tags if tag.strip()]
+            self.tags = list(
+                dict.fromkeys(tag.lower().strip() for tag in self.tags if tag.strip())
+            )
 
 
 @dataclass
