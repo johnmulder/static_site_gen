@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Prepare an unpublished draft, validate only, or publish a verified draft
+        type: choice
+        options: [prepare, dry-run, publish]
+        default: prepare
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alpha-release
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: inputs.mode != 'publish'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python: "3.12"
+          - os: ubuntu-latest
+            python: "3.13"
+          - os: ubuntu-latest
+            python: "3.14"
+          - os: macos-latest
+            python: "3.14"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -e '.[dev]'
+      - run: make check
+
+  bundle:
+    if: inputs.mode != 'publish'
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: python -m pip install -e '.[dev]'
+      - run: make release-check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-bundle
+          path: dist/release/
+          if-no-files-found: error
+      - name: Validate delivery without remote writes
+        if: inputs.mode == 'dry-run'
+        run: python scripts/deliver_release.py --mode dry-run --bundle dist/release/$(python -c 'from importlib.metadata import version; print(version("static-site-gen"))')
+
+  deliver:
+    if: always() && inputs.mode != 'dry-run' && ((inputs.mode == 'prepare' && needs.bundle.result == 'success') || inputs.mode == 'publish')
+    needs: [verify, bundle]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_MODE: ${{ inputs.mode }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: python -m pip install -e '.[dev]'
+      - uses: actions/download-artifact@v4
+        if: inputs.mode == 'prepare'
+        with:
+          name: release-bundle
+          path: dist/release
+      - name: Fetch the existing frozen candidate without rebuilding
+        id: frozen
+        if: inputs.mode == 'publish'
+        run: python scripts/deliver_release.py --mode fetch --output-dir "$RUNNER_TEMP/release"
+      - name: Select the already verified source commit
+        if: inputs.mode == 'publish'
+        env:
+          FROZEN_COMMIT: ${{ steps.frozen.outputs.commit }}
+        run: |
+          git merge-base --is-ancestor "$FROZEN_COMMIT" origin/main
+          git checkout --detach "$FROZEN_COMMIT"
+      - name: Verify and deliver the frozen candidate
+        env:
+          FROZEN_BUNDLE: ${{ steps.frozen.outputs.bundle }}
+        run: |
+          if [ "$RELEASE_MODE" = publish ]; then
+            python scripts/deliver_release.py --mode publish --bundle "$FROZEN_BUNDLE"
+          else
+            python scripts/deliver_release.py --mode prepare --bundle dist/release/$(python -c 'from importlib.metadata import version; print(version("static-site-gen"))')
+          fi
