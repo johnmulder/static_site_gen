@@ -117,19 +117,13 @@ class _PreviewHandler(http.server.SimpleHTTPRequestHandler):
                 if not public_path.startswith(self._url_prefix + "/"):
                     return None
             relative_path = public_path[len(self._url_prefix) :]
-            # Decode once for lookup; deeper encodings must not conceal traversal.
-            checked_path = relative_path
-            while True:
-                if (
-                    "\\" in checked_path
-                    or any(part in {".", ".."} for part in checked_path.split("/"))
-                    or any(ord(char) < 32 or ord(char) == 127 for char in checked_path)
-                ):
-                    return None
-                decoded = unquote(checked_path)
-                if decoded == checked_path:
-                    break
-                checked_path = decoded
+            # Decode once: percent escapes in the filename remain literal data.
+            if (
+                "\\" in relative_path
+                or any(part in {".", ".."} for part in relative_path.split("/"))
+                or any(ord(char) < 32 or ord(char) == 127 for char in relative_path)
+            ):
+                return None
             path = (self._preview_root / relative_path.lstrip("/")).resolve()
             if not path.is_relative_to(self._preview_root):
                 return None

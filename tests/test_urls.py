@@ -24,6 +24,7 @@ from static_site_gen.generator.output import (
         "topic#part",
         "topic?part",
         "topic%20part",
+        "%2e%2e",
         "topic/part",
         'quote"&value',
     ],

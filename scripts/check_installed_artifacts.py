@@ -431,6 +431,11 @@ def check_artifact(artifact: Path, *, expected_version: str | None = None) -> No
             "---\ntitle: Private Draft\ndate: 2025-10-18\ndraft: true\ntags: [private-draft]\n---\nPrivate draft body.\n",
             encoding="utf-8",
         )
+        (project / "content/pages/literal-escapes.md").write_text(
+            "---\ntitle: Literal escapes\ndate: 2025-10-17\nslug: '%2e%2e'\n---\n"
+            "Literal percent escapes stay in the filename.\n",
+            encoding="utf-8",
+        )
         output = project / "artifacts/public"
         run(*module, "build", "--project-dir", project)
         if (

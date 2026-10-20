@@ -107,7 +107,18 @@ def test_prefix_and_directory_redirects_preserve_public_path_and_query(
 
 @pytest.mark.parametrize("prefix", ["", "/blog", "/caf%C3%A9"])
 @pytest.mark.parametrize(
-    "slug", ["café #?% done", "literal%20", "encoded%2Fname", "literal%ff"]
+    "slug",
+    [
+        "café #?% done",
+        "literal%20",
+        "encoded%2Fname",
+        "literal%ff",
+        "%2e",
+        "%2e%2e",
+        "%5c",
+        "%00",
+        "%252e%252e",
+    ],
 )
 def test_encoded_unicode_and_reserved_slug_paths_are_decoded_once(
     output_dir, prefix, slug
