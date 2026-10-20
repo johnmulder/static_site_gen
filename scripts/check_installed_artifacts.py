@@ -15,6 +15,7 @@ import urllib.parse
 import urllib.request
 import venv
 import zipfile
+from collections.abc import Iterator
 from email.parser import Parser
 from html.parser import HTMLParser
 from pathlib import Path
@@ -143,49 +144,133 @@ class _Links(HTMLParser):
         )
 
 
-def _check_link(output: Path, source: Path, link: str) -> None:
-    parsed = urllib.parse.urlsplit(link)
-    if parsed.netloc and parsed.netloc != "example.com":
-        return
-    if parsed.scheme and parsed.scheme not in {"http", "https"}:
-        return
-    if not parsed.path:
-        return
-    path = urllib.parse.unquote(parsed.path)
-    destination = (
-        output / path.lstrip("/") if path.startswith("/") else source.parent / path
+def _origin(parsed: urllib.parse.SplitResult) -> tuple[str, str | None, int | None]:
+    """Compare HTTP origins with their default ports made explicit."""
+    return (
+        parsed.scheme.lower(),
+        parsed.hostname,
+        parsed.port
+        if parsed.port is not None
+        else {"http": 80, "https": 443}.get(parsed.scheme.lower()),
     )
+
+
+def _check_link(
+    output: Path,
+    source: Path,
+    link: str,
+    base_url: str = "https://example.com",
+    *,
+    require_same_site: bool = False,
+) -> tuple[str, Path] | None:
+    """Resolve a public URL inside its mount, retaining authored relative paths."""
+    link = link.strip()
+    base = urllib.parse.urlsplit(base_url)
+    parsed = urllib.parse.urlsplit(link)
+    if require_same_site and (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.netloc
+        or _origin(parsed) != _origin(base)
+    ):
+        raise RuntimeError(f"{source}: expected configured site origin: {link}")
+    if parsed.scheme and parsed.scheme not in {"http", "https"}:
+        return None
+    if parsed.netloc and _origin(
+        urllib.parse.urlsplit(urllib.parse.urljoin(base_url, link))
+    ) != _origin(base):
+        return None
+    if parsed.scheme and not parsed.netloc:
+        raise RuntimeError(f"{source}: invalid local URL: {link}")
+    if not parsed.path and not require_same_site:
+        return None
+    prefix = urllib.parse.unquote(base.path, errors="strict").rstrip("/")
+    source_url = urllib.parse.urlunsplit(
+        (
+            base.scheme,
+            base.netloc,
+            base.path.rstrip("/")
+            + "/"
+            + urllib.parse.quote(source.relative_to(output).as_posix(), safe="/"),
+            "",
+            "",
+        )
+    )
+    resolved = urllib.parse.urlsplit(urllib.parse.urljoin(source_url, link))
+    try:
+        path = urllib.parse.unquote(resolved.path, errors="strict")
+    except UnicodeError as exc:
+        raise RuntimeError(f"{source}: invalid local URL encoding: {link}") from exc
+    if "\x00" in path or "\\" in path:
+        raise RuntimeError(f"{source}: invalid local URL path: {link}")
+    if prefix and path != prefix and not path.startswith(prefix + "/"):
+        raise RuntimeError(f"{source}: link escapes configured URL prefix: {link}")
+    relative = path[len(prefix) :].lstrip("/")
+    destination = output / relative
+    if path.endswith("/") or destination.is_dir():
+        destination /= "index.html"
     if not destination.resolve().is_relative_to(output.resolve()):
         raise RuntimeError(f"{source}: link escapes output: {link}")
-    if path.endswith("/"):
-        destination /= "index.html"
     if not destination.is_file():
         raise RuntimeError(f"{source}: broken local link: {link}")
+    public_path = urllib.parse.quote(path or "/", safe="/")
+    if resolved.query:
+        public_path += "?" + urllib.parse.quote(
+            resolved.query, safe="%=&;:+,/?@!$'()*[]-"
+        )
+    return public_path, destination
 
 
-def validate_site(output: Path) -> None:
-    """Parse generated XML and require generated local links to resolve."""
+def _site_links(output: Path) -> Iterator[tuple[Path, str, bool]]:
+    """Collect HTML links and the machine-owned XML URLs that must stay local."""
     for document in output.rglob("*.html"):
         links = _Links()
         links.feed(document.read_text(encoding="utf-8"))
         for link in links.values:
-            _check_link(output, document, link)
+            yield document, link, False
     feed = ElementTree.parse(output / "feed.xml")
     if feed.getroot().tag != "rss" or feed.find("channel") is None:
         raise RuntimeError("Expected an RSS channel")
-    for element in feed.findall("./channel/item/link"):
-        _check_link(output, output / "feed.xml", element.text or "")
+    for selector in ("./channel/link", "./channel/item/link"):
+        for element in feed.findall(selector):
+            yield output / "feed.xml", element.text or "", True
+    for element in feed.findall("./channel/item/guid"):
+        if element.get("isPermaLink", "true").lower() != "false":
+            yield output / "feed.xml", element.text or "", True
+    for element in feed.findall("./channel/{http://www.w3.org/2005/Atom}link"):
+        yield output / "feed.xml", element.get("href", ""), True
     sitemap = ElementTree.parse(output / "sitemap.xml")
     if sitemap.getroot().tag != "{http://www.sitemaps.org/schemas/sitemap/0.9}urlset":
         raise RuntimeError("Expected a sitemap urlset")
     for element in sitemap.findall("{*}url/{*}loc"):
-        _check_link(output, output / "sitemap.xml", element.text or "")
+        yield output / "sitemap.xml", element.text or "", True
+
+
+def validate_site(output: Path, base_url: str = "https://example.com") -> None:
+    """Require generated local HTML and XML links to resolve within the mount."""
+    for source, link, machine_owned in _site_links(output):
+        _check_link(output, source, link, base_url, require_same_site=machine_owned)
 
 
 def _preview(
-    cli: Path, project: Path, environment: dict[str, str], expected: bytes
+    cli: Path,
+    project: Path,
+    environment: dict[str, str],
+    output_dir: Path,
+    base_url: str = "https://example.com",
 ) -> None:
-    """Run the documented preview command and request its root within a deadline."""
+    """Request mounted pages, linked assets, XML URLs, and directory redirects."""
+    prefix = urllib.parse.urlsplit(base_url).path.rstrip("/")
+    homepage = prefix + "/"
+    requests = {homepage: output_dir / "index.html"}
+    for source, link, machine_owned in _site_links(output_dir):
+        local = _check_link(
+            output_dir, source, link, base_url, require_same_site=machine_owned
+        )
+        if local is not None:
+            requests[local[0]] = local[1]
+    for path, destination in list(requests.items()):
+        if path.endswith("/"):
+            requests[(path.rstrip("/") or "/") + "?preview=1"] = destination
     with socket.socket() as available:
         available.bind(("127.0.0.1", 0))
         port = available.getsockname()[1]
@@ -201,9 +286,9 @@ def _preview(
         while True:
             try:
                 with urllib.request.urlopen(
-                    f"http://127.0.0.1:{port}/", timeout=1
+                    f"http://127.0.0.1:{port}{homepage}", timeout=1
                 ) as response:
-                    if response.read() != expected:
+                    if response.read() != (output_dir / "index.html").read_bytes():
                         raise RuntimeError(
                             "Preview did not serve the generated homepage"
                         )
@@ -212,6 +297,35 @@ def _preview(
                 if process.poll() is not None or time.monotonic() >= deadline:
                     raise RuntimeError("Preview server did not become ready") from None
                 time.sleep(0.05)
+        for path, destination in requests.items():
+            with urllib.request.urlopen(
+                f"http://127.0.0.1:{port}{path}", timeout=2
+            ) as response:
+                if response.read() != destination.read_bytes():
+                    raise RuntimeError(f"Preview returned incorrect content: {path}")
+                requested = urllib.parse.urlsplit(path)
+                expected_path = requested.path or "/"
+                if destination.name == "index.html" and not expected_path.endswith(
+                    ("/", "/index.html")
+                ):
+                    expected_path += "/"
+                actual = urllib.parse.urlsplit(response.geturl())
+                if actual.path != expected_path or actual.query != requested.query:
+                    raise RuntimeError(f"Preview lost its URL prefix or query: {path}")
+        if prefix:
+            for path in ("/", "/static/style.css", prefix + "-outside/"):
+                try:
+                    with urllib.request.urlopen(
+                        f"http://127.0.0.1:{port}{path}", timeout=2
+                    ):
+                        pass
+                except urllib.error.HTTPError as exc:
+                    if exc.code != 404:
+                        raise RuntimeError(
+                            f"Preview returned {exc.code}: {path}"
+                        ) from exc
+                else:
+                    raise RuntimeError(f"Preview served outside its URL prefix: {path}")
         process.send_signal(signal.SIGINT)
         output, _ = process.communicate(timeout=5)
         if process.returncode != 0:
@@ -290,7 +404,7 @@ def check_artifact(artifact: Path, *, expected_version: str | None = None) -> No
         project = directory / "sample-site"
         run(cli, "build", "--project-dir", project)
         validate_site(project / "site")
-        _preview(cli, project, environment, (project / "site/index.html").read_bytes())
+        _preview(cli, project, environment, project / "site")
 
         configuration = project / "config.yaml"
         config = yaml.safe_load(configuration.read_text(encoding="utf-8"))
@@ -308,7 +422,8 @@ def check_artifact(artifact: Path, *, expected_version: str | None = None) -> No
                 },
                 allow_unicode=True,
             )
-            + "---\nPublished route body.\n",
+            + "---\nPublished route body.\n\n[Site home](../../../)\n"
+            "\n[Stylesheet](../../../static/style.css)\n",
             encoding="utf-8",
         )
         draft = project / "content/posts/draft.md"
@@ -329,11 +444,21 @@ def check_artifact(artifact: Path, *, expected_version: str | None = None) -> No
         ):
             raise RuntimeError("Draft content leaked into default output")
         validate_site(output)
-        _preview(cli, project, environment, (output / "index.html").read_bytes())
+        _preview(cli, project, environment, output)
+        for base_url in (
+            "https://example.com/blog",
+            "https://example.com/nested/blog",
+            "https://example.com/%E6%97%A5%E6%9C%AC%E8%AA%9E/blog",
+        ):
+            config["base_url"] = base_url
+            configuration.write_text(yaml.safe_dump(config), encoding="utf-8")
+            run(*module, "build", "--project-dir", project)
+            validate_site(output, base_url)
+            _preview(cli, project, environment, output, base_url)
         run(*module, "build", "--project-dir", project, "--drafts")
         if len(ElementTree.parse(output / "feed.xml").findall("./channel/item")) != 3:
             raise RuntimeError("--drafts did not include the draft in RSS")
-        validate_site(output)
+        validate_site(output, base_url)
 
         for post in (project / "content/posts").glob("*.md"):
             if post != draft:
@@ -348,7 +473,7 @@ def check_artifact(artifact: Path, *, expected_version: str | None = None) -> No
             )
         draft.unlink()
         run(*module, "build", "--project-dir", project)
-        validate_site(output)
+        validate_site(output, base_url)
         if "No posts yet." not in (output / "index.html").read_text(encoding="utf-8"):
             raise RuntimeError("Empty site did not render its homepage")
         previous = _snapshot(output)

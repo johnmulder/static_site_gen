@@ -7,13 +7,15 @@ This module provides the CLI commands for building and managing static sites.
 import argparse
 import http.server
 import logging
+import socket
 import socketserver
 import sys
 from collections.abc import Callable
 from datetime import date
 from importlib import resources
 from pathlib import Path
-from typing import cast
+from typing import BinaryIO, cast
+from urllib.parse import unquote, urlsplit
 
 import yaml
 from jinja2 import TemplateError
@@ -86,6 +88,77 @@ class _PreviewServer(http.server.HTTPServer):
         self.server_port = self.server_address[1]
 
 
+class _PreviewHandler(http.server.SimpleHTTPRequestHandler):
+    """Mount the output directory at its public URL prefix."""
+
+    def __init__(
+        self,
+        request: socket.socket,
+        client_address: tuple[str, int],
+        server: socketserver.BaseServer,
+        *,
+        directory: str,
+        url_prefix: str,
+    ) -> None:
+        self._preview_root = Path(directory).resolve()
+        self._url_prefix = unquote(url_prefix, errors="strict")
+        self._requested_path = self._preview_root
+        super().__init__(request, client_address, server, directory=directory)
+
+    def _resolve_request_path(self, target: str) -> Path | None:
+        try:
+            parsed = urlsplit(target)
+            if parsed.scheme or parsed.netloc:
+                return None
+            public_path = unquote(parsed.path, errors="strict")
+            if not public_path.startswith("/"):
+                return None
+            if self._url_prefix and public_path != self._url_prefix:
+                if not public_path.startswith(self._url_prefix + "/"):
+                    return None
+            relative_path = public_path[len(self._url_prefix) :]
+            # Decode once for lookup; deeper encodings must not conceal traversal.
+            checked_path = relative_path
+            while True:
+                if (
+                    "\\" in checked_path
+                    or any(part in {".", ".."} for part in checked_path.split("/"))
+                    or any(ord(char) < 32 or ord(char) == 127 for char in checked_path)
+                ):
+                    return None
+                decoded = unquote(checked_path)
+                if decoded == checked_path:
+                    break
+                checked_path = decoded
+            path = (self._preview_root / relative_path.lstrip("/")).resolve()
+            if not path.is_relative_to(self._preview_root):
+                return None
+            if public_path.endswith("/") and path.is_file():
+                return None
+            if path.is_dir():
+                for name in ("index.html", "index.htm"):
+                    index = path / name
+                    if index.is_file():
+                        if not index.resolve().is_relative_to(self._preview_root):
+                            return None
+                        break
+            return path
+        except (OSError, RuntimeError, ValueError):
+            return None
+
+    def send_head(self) -> BinaryIO | None:
+        path = self._resolve_request_path(self.path)
+        if path is None:
+            self.send_error(404, "File not found")
+            return None
+        self._requested_path = path
+        return super().send_head()
+
+    def translate_path(self, path: str) -> str:
+        """Keep the public request URL intact for directory redirects."""
+        return str(self._requested_path)
+
+
 def cmd_build(args: argparse.Namespace) -> int:
     """
     Execute site build command.
@@ -143,12 +216,12 @@ def cmd_serve(args: argparse.Namespace) -> int:
         return 1
 
     handler = functools.partial(
-        http.server.SimpleHTTPRequestHandler, directory=str(site_dir)
+        _PreviewHandler, directory=str(site_dir), url_prefix=config.url_prefix
     )
     try:
         with _PreviewServer(("127.0.0.1", port), handler) as httpd:
             print(
-                f"Serving site at http://localhost:{httpd.server_port}/  "
+                f"Serving site at http://localhost:{httpd.server_port}{config.url_prefix}/  "
                 "(press Ctrl+C to stop)",
                 flush=True,
             )

@@ -46,9 +46,8 @@ def test_root_urls_have_consistent_feed_and_sitemap(sample_project, base_url, ex
 @pytest.mark.parametrize(
     "base_url, error",
     [
-        ("https://example.com/blog", "without a path prefix"),
-        ("https://example.com//", "without a path prefix"),
-        ("https://example.com/;params", "without a path prefix"),
+        ("https://example.com//", "unsafe path prefix"),
+        ("https://example.com/;params", "unsafe path prefix"),
         ("https://example.com?search=term", "query string or fragment"),
         ("https://example.com/#section", "query string or fragment"),
         ("https://example.com?", "query string or fragment"),

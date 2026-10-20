@@ -1,8 +1,8 @@
 # Development Guide
 
-## Supported alpha contract
+## Development checkout and prepared alpha
 
-The first alpha is `0.1.0a1`, for Python 3.12-3.14 on Linux and macOS. Windows support, URL-prefix hosting, and PyPI publication are deferred. Runtime content and templates are locally trusted; Markdown HTML is not fully sanitized and templates are not sandboxed.
+The prepared first alpha is `0.1.0a1`, for Python 3.12-3.14 on Linux and macOS. Its frozen artifacts support domain-root hosting. The current development checkout adds URL-prefix hosting; this unreleased enhancement does not alter the prepared candidate, tag, or assets. Windows support and PyPI publication remain deferred. Runtime content and templates are locally trusted; Markdown HTML is not fully sanitized and templates are not sandboxed.
 
 The public CLI is `static-site-gen` or `python -m static_site_gen`, with `init`, `build`, and `serve`. Public package version APIs and distribution metadata use the version in `pyproject.toml`.
 
@@ -68,7 +68,7 @@ Keep the packaged and sample templates consistent. Preserve meaningful parser, r
 
 Posts and pages require a nonempty `title` and a valid `date`. Optional metadata includes string tags, boolean `draft`, string `description`, and a string `slug`. Slugs can be generated from titles and support Unicode and valid nested routes. Normalized tags are unique within a post. Invalid content is logged with its filename and skipped; no filename-date fallback exists.
 
-Configuration requires nonempty `site_name`, `base_url`, and `author`. Supported URLs are absolute HTTP/HTTPS domain roots, with an optional trailing slash normalized away. Prefix paths, query strings, fragments, credentials, and malformed hosts are rejected. IANA timezone names are validated and timezone-aware dates are preserved. `posts_per_page` is a positive integer, excluding booleans.
+Configuration requires nonempty `site_name`, `base_url`, and `author`. Supported base URLs are absolute HTTP/HTTPS URLs with an optional validated path prefix. A trailing slash is normalized away, so `https://example.com/blog/` becomes `https://example.com/blog`. Query strings, fragments, credentials, malformed hosts, and unsafe prefix paths are rejected. IANA timezone names are validated and timezone-aware dates are preserved. `posts_per_page` is a positive integer, excluding booleans.
 
 ```yaml
 site_name: "My Blog"
@@ -85,6 +85,16 @@ An omitted `markdown_extensions` setting uses the defaults shown above. An expli
 
 Routes are `/posts/<slug>/`, `/<slug>/`, `/tag/<tag>/`, and `/page/<number>/`, backed by `index.html`. The homepage, tag index, RSS, sitemap, and static assets have reserved destinations. Ordinary duplicate content slugs receive deterministic suffixes; conflicts with other planned destinations fail before publication with source diagnostics.
 
+Prefix hosting changes public URLs, not these output routes or directory layouts. A site with `base_url: https://example.com/blog` still writes `site/index.html`, `site/posts/`, and `site/static/`; its host mounts the output contents at `/blog/`.
+
+The Jinja2 `site_url` filter adds the configured prefix to an unprefixed root-relative internal path. `post_url`, `page_url`, and `tag_url` retain their existing unprefixed route behavior. Chain each route through `site_url` once for HTML links; combine `base_url` and the unprefixed route for absolute feed and sitemap URLs. Keep packaged and sample templates consistent.
+
+The generator does not rewrite authored Markdown links, raw HTML, CSS URLs, or custom templates. Authors must supply correctly prefixed URLs or relative URLs that work at the destination page. Prefix support adds no CLI option or runtime dependency.
+
+Routing changes must preserve domain-root behavior and cover prefixed HTML links, assets, feeds, sitemaps, and installed scaffolding. Preview checks must use the configured prefix and verify that requests outside it return 404.
+
+Installed wheel and source-archive checks build domain-root, simple-prefix, nested-prefix, and Unicode-prefix sites. They check local HTML links and absolute RSS/sitemap URLs against the configured mount, then request the generated targets through preview, including redirects and assets. Authored links are checked but never rewritten.
+
 ## Trust and failure behavior
 
 YAML uses safe loading and Jinja2 escapes metadata. Converted Markdown bodies are marked safe in templates. Removing script tags is not a complete sanitizer and does not make third-party HTML trusted. Build only locally trusted Markdown and templates.
@@ -93,11 +103,13 @@ Output must remain inside the project and outside its input directories, configu
 
 Configuration, template, rendering, and write errors return nonzero statuses. Generation failures preserve previous output. Swap failures attempt rollback; if rollback cannot complete, diagnostics identify the retained previous-site backup. Backup cleanup failure after a completed swap warns and leaves publication successful. Process death between directory renames can require recovery; publication is not crash-atomic.
 
-`init` preserves occupied destinations, writes UTF-8, and reports filesystem failures. `serve` validates configuration and port range, binds only localhost, prints the actual bound URL after startup, and handles bind errors and Ctrl+C. Port zero chooses an available port.
+`init` preserves occupied destinations, writes UTF-8, and reports filesystem failures. `serve` validates configuration and port range, binds only localhost, prints the actual bound URL including the configured prefix after startup, and handles bind errors and Ctrl+C. It mounts the output directory at that prefix and returns 404 outside it. Port zero chooses an available port.
 
 ## Alpha release workflow
 
 [RELEASE_PLAN.md](RELEASE_PLAN.md) defines the complete noninteractive readiness criteria. The selected version is `0.1.0a1` and its tag is `v0.1.0a1`. The workflow uses the repository's automatic token; no additional publishing account or stored credential is required for GitHub Releases.
+
+That prepared candidate is frozen at `31a163201ff24466a497af970c938f30f681dee6`. URL-prefix hosting belongs to subsequent development and is absent from its artifacts. Use `make check` for the current checkout; retain the existing bundle, tag, asset hashes, and historical acceptance evidence. A later release must use a separate candidate rather than replace the frozen `0.1.0a1` bundle.
 
 ```bash
 # Read-only delivery validation; no release writes.

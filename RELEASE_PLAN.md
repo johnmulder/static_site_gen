@@ -2,6 +2,13 @@
 
 Evaluated on 2026-10-17 against `main` at `62fd788`; completed on 2026-10-17.
 
+This is the historical readiness record for the frozen `0.1.0a1` candidate.
+The current development checkout subsequently adds URL-prefix hosting, documented
+in [README.md](README.md) and [CHANGELOG.md](CHANGELOG.md). That enhancement is
+unreleased and is absent from the prepared candidate's artifacts. The domain-root
+requirements and dated evidence below describe that original candidate; its
+source, version, tag, and asset hashes remain unchanged.
+
 ## Verdict and completion target
 
 The project is ready for its first alpha release. All R1-R8 work is complete,
@@ -329,8 +336,12 @@ interactive approval step.
 
 ## Deferred beyond the first alpha
 
-PyPI publication, verified Windows support, URL-prefix hosting, third-party HTML
-sanitization, themes/plugins, new deployment integrations, performance targets,
+URL-prefix hosting is now available in the development checkout, after the frozen
+alpha candidate. It does not change that candidate's domain-root contract or
+require replacing its retained release assets.
+
+PyPI publication, verified Windows support, third-party HTML sanitization,
+themes/plugins, new deployment integrations, performance targets,
 bit-for-bit reproducible builds, and recovery from process death between output
 renames are separate work. They do not block this alpha contract. Current
 publication preserves the previous site on ordinary rendering/write/swap errors;

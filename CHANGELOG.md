@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+These changes follow the frozen, prepared `0.1.0a1` candidate and are absent from its artifacts.
+
+- Accept a validated path prefix in `base_url`, including project-site URLs such as `https://user.github.io/repository/`, and normalize the trailing slash away.
+- Prefix bundled HTML links and assets, preserve absolute feed and sitemap URLs, and serve local previews at the configured path. Requests outside the preview prefix return 404.
+- Add the Jinja2 `site_url` filter for root-relative internal paths while preserving the unprefixed `post_url`, `page_url`, and `tag_url` route helpers and existing output layout.
+- Keep authored Markdown, raw HTML, CSS URLs, and custom templates unchanged; authors must use correctly prefixed or working relative URLs. No CLI option or runtime dependency is added.
+
 ## 0.1.0a1
 
 First alpha candidate for Python 3.12-3.14 on Linux and macOS. Windows is unverified. Release preparation retains a verified unpublished GitHub prerelease draft; public publication is a separate command.

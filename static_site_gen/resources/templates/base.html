@@ -5,20 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ page_title }} | {{ site.site_name }}{% endblock %}</title>
     <meta name="description" content="{% block description %}{{ site.description | default('A static site blog') }}{% endblock %}">
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="alternate" type="application/rss+xml" title="{{ site.site_name }}" href="/feed.xml">
+    <link rel="stylesheet" href="{{ '/static/style.css' | site_url }}">
+    <link rel="alternate" type="application/rss+xml" title="{{ site.site_name }}" href="{{ '/feed.xml' | site_url }}">
     {% block head %}{% endblock %}
 </head>
 <body>
     <header>
         <nav class="site-nav">
             <div class="site-title">
-                <a href="/">{{ site.site_name }}</a>
+                <a href="{{ '/' | site_url }}">{{ site.site_name }}</a>
             </div>
             <div class="site-links">
-                <a href="/" class="nav-link">Home</a>
-                <a href="/about/" class="nav-link">About</a>
-                <a href="/tag/" class="nav-link">Tags</a>
+                <a href="{{ '/' | site_url }}" class="nav-link">Home</a>
+                <a href="{{ '/about/' | site_url }}" class="nav-link">About</a>
+                <a href="{{ '/tag/' | site_url }}" class="nav-link">Tags</a>
             </div>
         </nav>
     </header>

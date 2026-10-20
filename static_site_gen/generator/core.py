@@ -6,10 +6,11 @@ the entire content -> template -> output pipeline.
 """
 
 import logging
+import re
 import tempfile
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote, unquote, urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import markdown
@@ -35,6 +36,36 @@ from .renderer import TemplateRenderer
 logger = logging.getLogger(__name__)
 
 
+def _normalize_url_prefix(path: str) -> str:
+    """Canonicalize an optional URL prefix without changing segment boundaries."""
+    if path in {"", "/"}:
+        return ""
+    segments = path.removesuffix("/").split("/")[1:]
+    encoded = []
+    for segment in segments:
+        if re.search(r"%(?![0-9a-fA-F]{2})", segment):
+            raise ValueError(
+                "base_url has an invalid percent escape in its path prefix"
+            )
+        try:
+            decoded = unquote(segment, errors="strict")
+            canonical = quote(decoded, safe="")
+        except (UnicodeError, ValueError) as exc:
+            raise ValueError("base_url path prefix must be valid UTF-8") from exc
+        if (
+            not decoded
+            or decoded in {".", ".."}
+            or decoded != decoded.strip()
+            or any(character in decoded for character in "/\\;")
+            or any(
+                ord(character) < 32 or ord(character) == 127 for character in decoded
+            )
+        ):
+            raise ValueError("base_url has an ambiguous or unsafe path prefix")
+        encoded.append(canonical)
+    return "/" + "/".join(encoded)
+
+
 @dataclass
 class SiteConfig:
     """
@@ -58,6 +89,11 @@ class SiteConfig:
     markdown_extensions: list[str] = field(
         default_factory=lambda: ["codehilite", "tables", "toc"]
     )
+
+    @property
+    def url_prefix(self) -> str:
+        """Return the encoded mount path, without a trailing slash."""
+        return urlparse(self.base_url).path.removesuffix("/")
 
     @classmethod
     def from_yaml(cls, filepath: Path) -> "SiteConfig":
@@ -136,12 +172,13 @@ class SiteConfig:
             )
         if parsed_url.username is not None or parsed_url.password is not None:
             raise ValueError("base_url must not contain credentials")
-        if parsed_url.path not in {"", "/"} or parsed_url.params:
-            raise ValueError("base_url must use a domain root without a path prefix")
+        if parsed_url.params:
+            raise ValueError("base_url has an ambiguous or unsafe path prefix")
         if "?" in base_url or "#" in base_url:
             raise ValueError("base_url must not contain a query string or fragment")
+        url_prefix = _normalize_url_prefix(parsed_url.path)
         base_url = parsed_url._replace(
-            netloc=parsed_url.netloc.lower(), path=""
+            netloc=parsed_url.netloc.lower(), path=url_prefix
         ).geturl()
 
         timezone = raw.get("timezone", "UTC")

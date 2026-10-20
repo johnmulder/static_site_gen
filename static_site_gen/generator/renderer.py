@@ -8,9 +8,18 @@ Provides clean separation between content and presentation layers.
 from pathlib import Path
 from typing import Any
 
-from jinja2 import Environment, FileSystemLoader, TemplateNotFound
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound, pass_context
+from jinja2.runtime import Context
 
 from .output import generate_page_url, generate_post_url, generate_tag_url
+
+
+@pass_context
+def _site_url(context: Context, path: str) -> str:
+    """Mount a root-relative route at the configured site prefix."""
+    if not path.startswith("/") or path.startswith("//"):
+        raise ValueError("site_url requires a root-relative URL path")
+    return str(context["site"].url_prefix) + path
 
 
 class TemplateRenderer:
@@ -46,6 +55,7 @@ class TemplateRenderer:
             page_url=generate_page_url,
             post_url=generate_post_url,
             tag_url=generate_tag_url,
+            site_url=_site_url,
         )
 
     def render_template(self, template_name: str, context: dict[str, Any]) -> str:
